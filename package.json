@@ -1,0 +1,15 @@
+{
+  "name": "ai-based-cv-generation-and-mock-interview-application",
+  "version": "1.0.0",
+  "description": "An AI based cv generation, job matching, Mock interview analyzer",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Group 15",
+  "license": "ISC",
+  "dependencies": {
+    "vite": "^7.1.3"
+  }
+}
