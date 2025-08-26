@@ -15,7 +15,7 @@
   --popover-foreground: #ffffff;
   --primary: #4F46E5;
   --primary-foreground: #ffffff;
-  --secondary: #1F2937;
+  --secondary: #c4c10f;
   --secondary-foreground: #ffffff;
   --muted: #374151;
   --muted-foreground: #9CA3AF;
@@ -23,6 +23,8 @@
   --accent-foreground: #ffffff;
   --destructive: #EF4444;
   --destructive-foreground: #ffffff;
+  --warning: #FACC15; 
+  --warning-foreground: #ffffff;
   --border: #374151;
   --input: #1F2937;
   --input-background: #1F2937;
@@ -151,7 +153,7 @@
 @layer base {
   :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) {
     h1 {
-      font-size: 2rem;
+      font-size: 3rem;
       font-weight: var(--font-weight-bold);
       line-height: 1.2;
       font-family: var(--font-family);
