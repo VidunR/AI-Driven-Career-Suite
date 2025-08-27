@@ -82,9 +82,13 @@ export function LandingPage({ onLogin, onGetStarted }) {
           <div className="flex justify-between items-center py-4">
             <div className="h-10 flex items-center">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <Users className="w-5 h-5 text-primary-foreground" />
+                <img
+                  src="/favicon_1.png"
+                  alt="SkillSprint Logo"
+                  className="w-8 h-8 object-cover rounded-md"
+                />
               </div>
-              <span className="ml-2 text-xl font-bold">AI Career Suite</span>
+              <span className="ml-2 mt-1 text-xl font-bold">SkillSprint</span>
             </div>
             <div className="flex items-center space-x-4">
               {/* text says "Login" on the screenshot */}
@@ -300,9 +304,13 @@ export function LandingPage({ onLogin, onGetStarted }) {
             <div>
               <div className="flex items-center">
                 <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                  <Users className="w-5 h-5 text-primary-foreground" />
+                  <img
+                    src="/favicon_1.png"
+                    alt="SkillSprint Logo"
+                    className="w-8 h-8 object-cover rounded-md"
+                  />
                 </div>
-                <span className="ml-2 text-lg font-semibold">AI Career Suite</span>
+                <span className="ml-2 text-lg font-semibold">SkillSprint</span>
               </div>
               <p className="py-3 mt-3 text-sm text-muted-foreground max-w-xs">
                 Your AI-powered career <br/>development platform
@@ -348,7 +356,7 @@ export function LandingPage({ onLogin, onGetStarted }) {
         <div className="border-t border-border">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
-              © {new Date().getFullYear()} AI Career Suite. All rights reserved.
+              © {new Date().getFullYear()} SkillSprint. All rights reserved.
             </p>
             <div className="flex items-center gap-4 text-xs">
               <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Security</a>

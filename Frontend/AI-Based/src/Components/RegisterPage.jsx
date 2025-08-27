@@ -93,36 +93,46 @@ export function RegisterPage({ onRegister, onLogin, onBack }) {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <Button
-            variant="ghost"
-            onClick={onBack}
-            className="mb-4 self-start"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Home
-          </Button>
-          
-          <div className="flex items-center justify-center mb-4">
-            <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
-              <Users className="w-6 h-6 text-primary-foreground" />
-            </div>
+  <div className="min-h-screen bg-background p-4">
+    {/* Back button in the top-left corner */}
+    <div className="mb-4">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onBack}
+        className="inline-flex items-center gap-2 px-2"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back
+      </Button>
+
+      {/* Header */}
+      <div className="text-center mb-8">        
+        <div className="flex items-center justify-center mb-4">
+          <div className="w-8 h-8 mb-4 rounded-lg flex items-center justify-center">
+              <img
+                src="/favicon_1.png"
+                alt="SkillSprint Logo"
+                className="w-8 h-8 object-cover rounded-md mb-2"
+              />
+            <span className="ml-2 text-lg font-semibold">SkillSprint</span>
           </div>
-          <h1 className="text-2xl">Create Account</h1>
-          <p className="text-muted-foreground mt-2">
-            Join AI Career Suite and accelerate your career
-          </p>
+            
         </div>
+      </div>
+
+    </div>
+
+    <div className=" bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        
 
         {/* Registration Card */}
         <Card className="border-border">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-xl">Sign Up</CardTitle>
+          <CardHeader className="space-y-1 text-center mb-2">
+            <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
             <CardDescription>
-              Create your account to get started
+              Start your AI-powered career journey today
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -179,7 +189,7 @@ export function RegisterPage({ onRegister, onLogin, onBack }) {
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Create a password"
+                    placeholder="Create a password (min. 6 characters)"
                     value={formData.password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
                     disabled={isLoading}
@@ -255,13 +265,15 @@ export function RegisterPage({ onRegister, onLogin, onBack }) {
                   onClick={onLogin}
                   className="p-0 h-auto font-normal text-primary hover:text-primary/80"
                 >
-                  Sign in here
+                  Sign in
                 </Button>
               </p>
             </div>
           </CardContent>
         </Card>
+        
       </div>
     </div>
-  );
+  </div>
+ );
 }
