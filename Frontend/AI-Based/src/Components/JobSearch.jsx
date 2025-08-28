@@ -9,17 +9,21 @@ import { Separator } from './ui/separator';
 import { Search, MapPin, Calendar, DollarSign, Building, Clock, ExternalLink, Heart, Filter } from 'lucide-react';
 import { toast } from 'sonner';
 
-export function JobSearch({ user, accessToken, onNavigate }) {
+export default function JobSearch({ user, accessToken, onNavigate }) {
   const [jobs, setJobs] = useState([]);
   const [filteredJobs, setFilteredJobs] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
-  const [levelFilter, setLevelFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');     // keep empty string for "placeholder" state
+  const [levelFilter, setLevelFilter] = useState('');    // keep empty string for "placeholder" state
   const [remoteOnly, setRemoteOnly] = useState(false);
   const [savedJobsOnly, setSavedJobsOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState(null);
+
+  // ADDED: Sentinel value constants used by <SelectItem/> instead of empty string
+  const ANY_TYPE = 'any-type';   // ADDED
+  const ANY_LEVEL = 'any-level'; // ADDED
 
   // Mock job data - in a real app, this would come from an API
   const mockJobs = [
@@ -116,12 +120,14 @@ export function JobSearch({ user, accessToken, onNavigate }) {
     setTimeout(() => {
       setJobs(mockJobs);
       setFilteredJobs(mockJobs);
+      setSelectedJob(mockJobs[0]);
       setIsLoading(false);
     }, 1000);
   }, []);
 
   useEffect(() => {
     filterJobs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, locationFilter, typeFilter, levelFilter, remoteOnly, savedJobsOnly, jobs]);
 
   const filterJobs = () => {
@@ -144,12 +150,14 @@ export function JobSearch({ user, accessToken, onNavigate }) {
     }
 
     // Job type filter
-    if (typeFilter) {
+    // ADDED: ignore sentinel "any-type" so selecting "All Types" doesn't filter
+    if (typeFilter && typeFilter !== ANY_TYPE) { // ADDED
       filtered = filtered.filter(job => job.type === typeFilter);
     }
 
     // Experience level filter
-    if (levelFilter) {
+    // ADDED: ignore sentinel "any-level" so selecting "All Levels" doesn't filter
+    if (levelFilter && levelFilter !== ANY_LEVEL) { // ADDED
       filtered = filtered.filter(job => job.level === levelFilter);
     }
 
@@ -170,7 +178,7 @@ export function JobSearch({ user, accessToken, onNavigate }) {
     setJobs(prev => prev.map(job => 
       job.id === jobId ? { ...job, saved: !job.saved } : job
     ));
-    toast.success('Job saved successfully');
+    toast.success('Job saved state updated'); // ADDED: clearer message (optional)
   };
 
   const applyToJob = (jobId) => {
@@ -221,7 +229,7 @@ export function JobSearch({ user, accessToken, onNavigate }) {
   }
 
   return (
-    <div className="flex h-full bg-background">
+    <div className="flex min-h-screen bg-background">
       {/* Filters Sidebar */}
       <div className="w-80 border-r border-border p-6 space-y-6 overflow-y-auto">
         <div>
@@ -263,7 +271,8 @@ export function JobSearch({ user, accessToken, onNavigate }) {
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Types</SelectItem>
+                {/* ADDED: Use non-empty sentinel value instead of "" to satisfy Radix */}
+                <SelectItem value={ANY_TYPE}>All Types</SelectItem> {/* ADDED */}
                 <SelectItem value="full-time">Full-time</SelectItem>
                 <SelectItem value="part-time">Part-time</SelectItem>
                 <SelectItem value="contract">Contract</SelectItem>
@@ -279,7 +288,8 @@ export function JobSearch({ user, accessToken, onNavigate }) {
                 <SelectValue placeholder="Select level" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Levels</SelectItem>
+                {/* ADDED: Use non-empty sentinel value instead of "" to satisfy Radix */}
+                <SelectItem value={ANY_LEVEL}>All Levels</SelectItem> {/* ADDED */}
                 <SelectItem value="entry">Entry Level</SelectItem>
                 <SelectItem value="mid">Mid Level</SelectItem>
                 <SelectItem value="senior">Senior Level</SelectItem>
@@ -289,12 +299,12 @@ export function JobSearch({ user, accessToken, onNavigate }) {
           </div>
 
           {/* Checkboxes */}
-          <div className="space-y-3">
+          <div className="space-y-3 mt-4">
             <div className="flex items-center space-x-2">
               <Checkbox 
                 id="remote" 
                 checked={remoteOnly}
-                onCheckedChange={setRemoteOnly}
+                onCheckedChange={(v) => setRemoteOnly(Boolean(v))}
               />
               <label htmlFor="remote" className="text-sm">Remote only</label>
             </div>
@@ -302,13 +312,11 @@ export function JobSearch({ user, accessToken, onNavigate }) {
               <Checkbox 
                 id="saved" 
                 checked={savedJobsOnly}
-                onCheckedChange={setSavedJobsOnly}
+                onCheckedChange={(v) => setSavedJobsOnly(Boolean(v))}
               />
               <label htmlFor="saved" className="text-sm">Saved jobs only</label>
             </div>
           </div>
-
-          <Separator />
 
           {/* Clear Filters */}
           <Button 
@@ -316,12 +324,12 @@ export function JobSearch({ user, accessToken, onNavigate }) {
             onClick={() => {
               setSearchQuery('');
               setLocationFilter('');
-              setTypeFilter('');
-              setLevelFilter('');
+              setTypeFilter('');   // empty string lets <Select> show placeholder again
+              setLevelFilter('');  // empty string lets <Select> show placeholder again
               setRemoteOnly(false);
               setSavedJobsOnly(false);
             }}
-            className="w-full"
+            className="w-full mt-6"
           >
             Clear All Filters
           </Button>

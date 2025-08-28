@@ -142,9 +142,9 @@ export function Help({ user, accessToken, onNavigate }) {
                     >
                       <span className="font-medium">{item.question}</span>
                       {expandedFAQ === item.id ? (
-                        <ChevronDown className="h-4 w-4" />
+                        <ChevronDown className="h-4 w-4"/>
                       ) : (
-                        <ChevronRight className="h-4 w-4" />
+                        <ChevronRight className="h-4 w-4"/>
                       )}
                     </button>
                     {expandedFAQ === item.id && (
@@ -210,7 +210,7 @@ export function Help({ user, accessToken, onNavigate }) {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="subject">Subject</Label>
+                  <Label htmlFor="subject" className="mb-2 block">Subject</Label>
                   <Input
                     id="subject"
                     value={contactForm.subject}
@@ -219,7 +219,7 @@ export function Help({ user, accessToken, onNavigate }) {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="message">Message</Label>
+                  <Label htmlFor="message" className="mb-2 block">Message</Label>
                   <Textarea
                     id="message"
                     value={contactForm.message}

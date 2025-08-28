@@ -5,11 +5,13 @@ import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Trophy, TrendingUp, TrendingDown, Crown, Award } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export function Leaderboard({ user, accessToken, onNavigate }) {
   const [leaderboard, setLeaderboard] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [timeframe, setTimeframe] = useState('monthly');
+  const navigate = useNavigate();
 
   // Mock data
   const mockLeaderboardData = [
@@ -192,7 +194,7 @@ export function Leaderboard({ user, accessToken, onNavigate }) {
               <p className="text-muted-foreground mb-4">
                 Take more mock interviews to improve your ranking and skills
               </p>
-              <Button onClick={() => onNavigate('mock-interview-setup')}>
+              <Button onClick={() => navigate('/mock-interview-setup')}>
                 Start New Interview
               </Button>
             </CardContent>

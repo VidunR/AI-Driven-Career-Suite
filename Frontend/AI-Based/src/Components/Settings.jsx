@@ -303,7 +303,7 @@ export function Settings({ user, accessToken, onNavigate }) {
             <CardContent className="space-y-6">
               <div className="space-y-4">
                 <div>
-                  <Label>Account Email</Label>
+                  <Label className="mb-2 block">Account Email</Label>
                   <Input value={user.email} disabled />
                   <p className="text-sm text-muted-foreground mt-1">
                     Contact support to change your email address

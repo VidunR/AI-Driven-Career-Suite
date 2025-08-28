@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
 import { ArrowLeft, Eye, EyeOff, Users } from 'lucide-react';
@@ -96,16 +97,17 @@ export function RegisterPage({ onRegister, onLogin, onBack }) {
   <div className="min-h-screen bg-background p-4">
     {/* Back button in the top-left corner */}
     <div className="mb-4">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={onBack}
-        className="inline-flex items-center gap-2 px-2"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back
-      </Button>
-
+      <Link to="./landing-page">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onBack}
+          className="inline-flex items-center gap-2 px-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>
+      </Link>
       {/* Header */}
       <div className="text-center mb-8">        
         <div className="flex items-center justify-center mb-4">
@@ -260,13 +262,15 @@ export function RegisterPage({ onRegister, onLogin, onBack }) {
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">
                 Already have an account?{' '}
-                <Button
-                  variant="link"
-                  onClick={onLogin}
-                  className="p-0 h-auto font-normal text-primary hover:text-primary/80"
-                >
-                  Sign in
-                </Button>
+                <Link to="/login">
+                  <Button
+                    variant="link"
+                    onClick={onLogin}
+                    className="p-0 h-auto font-normal text-primary hover:text-primary/80"
+                  >
+                    Sign in
+                  </Button>
+                </Link>
               </p>
             </div>
           </CardContent>
