@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
+import { useNavigate } from 'react-router-dom';
 import { 
   Plus, 
   Search, 
@@ -22,13 +23,14 @@ import { getCVs, createCV, deleteCV } from '../utils/supabase/client';
 import { toast } from 'sonner';
 
 export function CVManager({ user, accessToken, onNavigate }) {
+  const navigate = useNavigate();
   const [cvs, setCvs] = useState([
     {
       id: 1,
       title: 'Software Engineer Resume',
       template: 'Modern Professional',
       lastModified: '2024-01-15',
-      status: 'active',
+      status: 'Active',
       jobsApplied: 5,
       views: 12,
       isDefault: true
@@ -38,7 +40,7 @@ export function CVManager({ user, accessToken, onNavigate }) {
       title: 'Frontend Developer CV',
       template: 'Creative Designer',
       lastModified: '2024-01-10',
-      status: 'draft',
+      status: 'Draft',
       jobsApplied: 0,
       views: 3,
       isDefault: false
@@ -48,7 +50,7 @@ export function CVManager({ user, accessToken, onNavigate }) {
       title: 'Full Stack Developer',
       template: 'Executive Suite',
       lastModified: '2024-01-08',
-      status: 'archived',
+      status: 'Archived',
       jobsApplied: 8,
       views: 25,
       isDefault: false
@@ -109,7 +111,7 @@ export function CVManager({ user, accessToken, onNavigate }) {
             Manage your CVs and track their performance
           </p>
         </div>
-        <Button onClick={() => onNavigate('cv-builder')} className="flex items-center gap-2">
+        <Button className="flex items-center gap-2" onClick={() => navigate('/cv-builder')}>
           <Plus className="w-4 h-4" />
           Create New CV
         </Button>
@@ -180,7 +182,7 @@ export function CVManager({ user, accessToken, onNavigate }) {
         </Card>
       </div>
 
-      {/* Search and Filter */}
+      {/* Search and  Filter */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -228,23 +230,22 @@ export function CVManager({ user, accessToken, onNavigate }) {
         {filteredCVs.map((cv) => (
           <Card key={cv.id} className="border-border hover:shadow-lg transition-shadow">
             <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    {cv.title}
-                    {cv.isDefault && (
-                      <Badge variant="secondary" className="text-xs">
-                        Default
-                      </Badge>
-                    )}
-                  </CardTitle>
-                  <CardDescription className="text-sm">
-                    {cv.template}
-                  </CardDescription>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="text-lg truncate">{cv.title}</CardTitle>
+                  <CardDescription className="text-sm">{cv.template}</CardDescription>
                 </div>
-                <Badge className={getStatusColor(cv.status)} variant="secondary">
-                  {cv.status}
-                </Badge>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {cv.isDefault && (
+                    <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20">
+                      Default
+                    </Badge>
+                  )}
+                  <Badge className={getStatusColor(cv.status)}>
+                    {cv.status}
+                  </Badge>
+                </div>
               </div>
             </CardHeader>
             
@@ -334,10 +335,7 @@ export function CVManager({ user, accessToken, onNavigate }) {
               ? 'Try adjusting your search or filter criteria.'
               : 'Create your first CV to get started.'}
           </p>
-          <Button onClick={() => onNavigate('cv-builder')}>
-            <Plus className="w-4 h-4 mr-2" />
-            Create Your First CV
-          </Button>
+          
         </div>
       )}
     </div>

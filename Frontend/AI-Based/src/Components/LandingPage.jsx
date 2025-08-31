@@ -1,5 +1,6 @@
 import React from "react";
 import { Button } from "./ui/button";
+import { Link } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -91,13 +92,13 @@ export function LandingPage({ onLogin, onGetStarted }) {
               <span className="ml-2 mt-1 text-xl font-bold">SkillSprint</span>
             </div>
             <div className="flex items-center space-x-4">
-              {/* text says "Login" on the screenshot */}
-              <Button variant="ghost" onClick={onLogin}>
-                Login
-              </Button>
-              <Button onClick={onGetStarted}>
-                Get Started
-              </Button>
+              <Link to="/login">
+                <Button variant="ghost" type="button">Login</Button>
+              </Link>
+
+              <Link to="/register">
+                <Button type="button">Get Started</Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -148,23 +149,18 @@ export function LandingPage({ onLogin, onGetStarted }) {
               </div>
 
               {/* buttons row */}
-              <div className="py-4  flex items-center gap-4">
-                <Button
-                  size="lg"
-                  onClick={onGetStarted}
-                  className="px-6 py-3 font-semibold"
-                >
-                  Get Started Free
-                  
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  onClick={onLogin}
-                  className="px-6 py-3"
-                >
-                  Login
-                </Button>
+              <div className="py-4 flex items-center gap-4">
+                <Link to="/register">
+                  <Button size="lg" className="px-6 py-3 font-semibold" type="button">
+                    Get Started Free
+                  </Button>
+                </Link>
+
+                <Link to="/login">
+                  <Button size="lg" variant="outline" className="px-6 py-3" type="button">
+                    Login
+                  </Button>
+                </Link>
               </div>
             </div>
 

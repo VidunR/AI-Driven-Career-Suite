@@ -1,84 +1,95 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { Input } from './ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Search, Eye, Trash2, Play } from 'lucide-react';
-import { toast } from 'sonner';
+import React, { useState, useEffect } from "react";
+import { Card, CardContent } from "./ui/card";
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
+import { Input } from "./ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { Search, Eye, Trash2, Play } from "lucide-react";
+import { toast } from "sonner";
+import { Link } from "react-router-dom";
 
 export function InterviewHistory({ user, accessToken, onNavigate }) {
   const [sessions, setSessions] = useState([]);
   const [filteredSessions, setFilteredSessions] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState(""); // '' -> placeholder (no filter)
+  const [statusFilter, setStatusFilter] = useState(""); // keep for future use if you add a Status select
   const [isLoading, setIsLoading] = useState(true);
 
   // Mock data
   const mockSessions = [
     {
-      id: '1',
-      date: new Date('2024-08-15'),
-      position: 'Senior Frontend Developer',
-      company: 'TechCorp',
-      type: 'mixed',
-      duration: 1680,
+      id: "1",
+      date: new Date("2024-08-15"),
+      position: "Senior Frontend Developer",
+      company: "TechCorp",
+      type: "mixed",
+      duration: 1680, // seconds
       score: 85,
-      status: 'completed',
+      status: "completed",
       questionsCompleted: 5,
-      totalQuestions: 5
+      totalQuestions: 5,
     },
     {
-      id: '2',
-      date: new Date('2024-08-12'),
-      position: 'Full Stack Engineer',
-      company: 'StartupXYZ',
-      type: 'technical',
+      id: "2",
+      date: new Date("2024-08-12"),
+      position: "Full Stack Engineer",
+      company: "StartupXYZ",
+      type: "technical",
       duration: 2100,
       score: 78,
-      status: 'completed',
+      status: "completed",
       questionsCompleted: 4,
-      totalQuestions: 4
+      totalQuestions: 4,
     },
     {
-      id: '3',
-      date: new Date('2024-08-10'),
-      position: 'Software Engineer',
-      company: 'BigTech',
-      type: 'behavioral',
+      id: "3",
+      date: new Date("2024-08-10"),
+      position: "Software Engineer",
+      company: "BigTech",
+      type: "behavioral",
       duration: 900,
       score: 72,
-      status: 'partial',
+      status: "partial",
       questionsCompleted: 3,
-      totalQuestions: 5
-    }
+      totalQuestions: 5,
+    },
   ];
 
   useEffect(() => {
-    setTimeout(() => {
+    const t = setTimeout(() => {
       setSessions(mockSessions);
       setFilteredSessions(mockSessions);
       setIsLoading(false);
-    }, 1000);
+    }, 600);
+    return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {
     let filtered = [...sessions];
 
     if (searchQuery) {
-      filtered = filtered.filter(session => 
-        session.position.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        session.company.toLowerCase().includes(searchQuery.toLowerCase())
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (s) =>
+          s.position.toLowerCase().includes(q) ||
+          s.company.toLowerCase().includes(q)
       );
     }
 
-    if (typeFilter) {
-      filtered = filtered.filter(session => session.type === typeFilter);
+    // treat "all" as no-filter; '' also means no filter (placeholder)
+    if (typeFilter && typeFilter !== "all") {
+      filtered = filtered.filter((s) => s.type === typeFilter);
     }
 
     if (statusFilter) {
-      filtered = filtered.filter(session => session.status === statusFilter);
+      filtered = filtered.filter((s) => s.status === statusFilter);
     }
 
     setFilteredSessions(filtered);
@@ -94,14 +105,14 @@ export function InterviewHistory({ user, accessToken, onNavigate }) {
   };
 
   const getScoreColor = (score) => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 70) return 'text-yellow-600';
-    return 'text-red-600';
+    if (score >= 80) return "text-green-600";
+    if (score >= 70) return "text-yellow-600";
+    return "text-red-600";
   };
 
   const deleteSession = (sessionId) => {
-    setSessions(prev => prev.filter(session => session.id !== sessionId));
-    toast.success('Interview session deleted');
+    setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    toast.success("Interview session deleted");
   };
 
   if (isLoading) {
@@ -120,12 +131,16 @@ export function InterviewHistory({ user, accessToken, onNavigate }) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Interview History</h1>
-          <p className="text-muted-foreground">Review your past mock interview sessions</p>
+          <p className="text-muted-foreground">
+            Review your past mock interview sessions
+          </p>
         </div>
-        <Button onClick={() => onNavigate('mock-interview-setup')}>
-          <Play className="h-4 w-4 mr-2" />
-          New Interview
-        </Button>
+        <Link to="/mock-interview-setup">
+          <Button onClick={() => onNavigate("mock-interview-setup")}>
+            <Play className="h-4 w-4 mr-2" />
+            New Interview
+          </Button>
+        </Link>
       </div>
 
       {/* Filters */}
@@ -133,7 +148,7 @@ export function InterviewHistory({ user, accessToken, onNavigate }) {
         <CardContent className="p-4">
           <div className="flex gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by position or company..."
                 value={searchQuery}
@@ -141,12 +156,15 @@ export function InterviewHistory({ user, accessToken, onNavigate }) {
                 className="pl-10"
               />
             </div>
+
+            {/* Type filter */}
             <Select value={typeFilter} onValueChange={setTypeFilter}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Types</SelectItem>
+                {/* Do NOT use empty-string here; Radix uses that to clear */}
+                <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="behavioral">Behavioral</SelectItem>
                 <SelectItem value="technical">Technical</SelectItem>
                 <SelectItem value="mixed">Mixed</SelectItem>
@@ -166,23 +184,34 @@ export function InterviewHistory({ user, accessToken, onNavigate }) {
                 <div className="space-y-2">
                   <h3 className="font-semibold text-lg">{session.position}</h3>
                   <p className="text-muted-foreground">{session.company}</p>
-                  <div className="flex items-center gap-4 text-sm">
+                  <div className="flex flex-wrap items-center gap-4 text-sm">
                     <Badge variant="outline">{session.type}</Badge>
-                    <Badge variant={session.status === 'completed' ? 'default' : 'secondary'}>
+                    <Badge
+                      variant={
+                        session.status === "completed" ? "default" : "secondary"
+                      }
+                    >
                       {session.status}
                     </Badge>
-                    <span>{session.date.toLocaleDateString()}</span>
+                    <span>
+                      {session.date.toLocaleDateString(undefined, {
+                        year: "numeric",
+                        month: "short",
+                        day: "2-digit",
+                      })}
+                    </span>
                     <span>{formatDuration(session.duration)}</span>
                     <span className={getScoreColor(session.score)}>
                       {session.score}%
                     </span>
                   </div>
                 </div>
+
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => onNavigate('interview-results')}
+                    onClick={() => onNavigate("interview-results")}
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     View Results
@@ -191,6 +220,7 @@ export function InterviewHistory({ user, accessToken, onNavigate }) {
                     variant="outline"
                     size="sm"
                     onClick={() => deleteSession(session.id)}
+                    title="Delete session"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -199,13 +229,15 @@ export function InterviewHistory({ user, accessToken, onNavigate }) {
             </CardContent>
           </Card>
         ))}
-        
+
         {filteredSessions.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">No interview sessions found.</p>
-            <Button 
-              className="mt-4" 
-              onClick={() => onNavigate('mock-interview-setup')}
+            <p className="text-muted-foreground">
+              No interview sessions found.
+            </p>
+            <Button
+              className="mt-4"
+              onClick={() => onNavigate("mock-interview-setup")}
             >
               Start Your First Interview
             </Button>
