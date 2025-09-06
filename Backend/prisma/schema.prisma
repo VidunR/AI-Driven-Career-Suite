@@ -1,0 +1,224 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "mysql"
+    url = env("DATABASE_URL")
+}
+
+// create settings_preference
+model SettingsPreference {
+    preferenceId Int @id @default(autoincrement())
+    language String @default("English")
+    publicProfileVisibility Boolean @default(true)
+    soundEffect Boolean @default(false)
+    emailNotification Boolean @default(true)
+    pushNotification Boolean @default(false)
+    interviewReminder Boolean @default(true)
+    productUpdate Boolean @default(true)
+    shareProgress Boolean @default(true)
+
+    user RegisteredUser[]
+}
+
+// create RegisteredUser
+model RegisteredUser {
+  userId       Int      @id @default(autoincrement())
+  firstName    String
+  lastName     String
+  email        String   @unique
+  hashedPassword String
+  country      String?
+  phoneNumber  String?
+  address      String?
+  dob          DateTime @db.Date
+  gender       String?
+  bio          String?
+  createdAt    DateTime @db.Date
+  proImgPath   String?
+
+  // Relation to preferences
+  preferenceId Int
+  settingsPreference SettingsPreference @relation(fields: [preferenceId], references: [preferenceId], onDelete: Cascade)
+
+  // Relation to projects
+  project Project[]
+
+  // Relation to skills via explicit join table
+  userSkill UserSkill[]
+
+  // Relation to education
+  education Education[]
+
+  // Relation to experince
+  experience Experience[]
+
+  // Relation to cv
+  cv Cv[]
+
+  // Relation to interview
+  interview Interview[]
+}
+
+// create Project
+model Project {
+  projectId        Int      @id @default(autoincrement())
+  projectName      String
+  projectDescription String?
+  startDate        DateTime? @db.Date
+  endDate          DateTime? @db.Date
+
+  // Foreign key to user
+  userId          Int
+  user    RegisteredUser @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  // Relation to skills via explicit join table
+  projectSkill   ProjectSkill[]
+}
+
+// Skills
+model Skill {
+  skillId   Int    @id @default(autoincrement())
+  skillName String
+
+  // Relation to users via join table
+  userSkill UserSkill[]
+
+  // Relation to projects via join table
+  projectSkill ProjectSkill[]
+}
+
+// Explicit join table for Users Skills
+model UserSkill {
+  userId     Int
+  skillId    Int
+
+  user        RegisteredUser @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  skill       Skill          @relation(fields: [skillId], references: [skillId])
+
+  @@id([userId, skillId])
+}
+
+// Explicit join table for Projects Skills
+model ProjectSkill {
+  projectId  Int
+  skillId    Int
+
+  project     Project @relation(fields: [projectId], references: [projectId], onDelete: Cascade)
+  skill       Skill   @relation(fields: [skillId], references: [skillId])
+
+  @@id([projectId, skillId])
+}
+
+// Create education
+model Education {
+    educationId Int @id @default(autoincrement())
+    degree String
+    institution String
+    startDate DateTime? @db.Date
+    endDate DateTime? @db.Date
+
+    // Foreign Key Setup
+    userId Int
+    user    RegisteredUser @relation(fields: [userId], references: [userId], onDelete: Cascade)
+}
+
+// Create experience
+model Experience {
+    experienceId Int @id @default(autoincrement())
+    jobTitle String
+    company String
+    startDate DateTime? @db.Date
+    endDate DateTime? @db.Date
+    description String?
+
+    // Foreign Key Setup
+    userId Int
+    user    RegisteredUser @relation(fields: [userId], references: [userId], onDelete: Cascade)
+}
+
+// Create cv
+model Cv {
+    cvId Int @id @default(autoincrement())
+    cvFilepath String
+    cvImagePath String
+
+    // Foreign Key Setup
+    userId Int
+    user    RegisteredUser @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+    // Connect to the keywords
+    keyword Keyword[]
+}
+
+// Create keyword
+model Keyword {
+    keywordId Int @id @default(autoincrement())
+    keywordName String
+    keywordValue String
+
+    // Foreign Key Setup
+    cvId Int
+    cv    Cv @relation(fields: [cvId], references: [cvId], onDelete: Cascade)
+}
+
+// Create InterviewJobRole
+model InterviewJobRole {
+    interviewJobRoleId Int @id @default(autoincrement())
+    jobRoleName String
+    jobRoleDescription String?
+
+    // Connect to the video_question
+    videoQuestion VideoQuestion[]
+
+    // Connect to the interview
+    interview Interview[]
+}
+
+// Create VideoQuestion
+model VideoQuestion {
+    videoQuestionId Int @id @default(autoincrement())
+    videoPath String
+    question String
+
+    // FK setup
+    interviewJobRoleId Int
+    interviewJobRole InterviewJobRole @relation(fields: [interviewJobRoleId], references: [interviewJobRoleId], onDelete: Cascade)
+
+    // Connect to interviewAnalysis
+    interviewAnalysis InterviewAnalysis[]
+}
+
+// Create interview
+model Interview {
+    interviewId Int @id @default(autoincrement())
+    interviewScore Float @default(0.0)
+
+    // FK setup user
+    userId Int
+    user RegisteredUser @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+    // FK setup interviewJobRole
+    interviewJobRoleId Int
+    interviewJobRole InterviewJobRole @relation(fields: [interviewJobRoleId], references: [interviewJobRoleId])
+
+    // Connect to interviewAnalysis
+    interviewAnalysis InterviewAnalysis[]
+}
+
+// Create InterviewAnalysis
+model InterviewAnalysis {
+    analyticsId Int @id @default(autoincrement())
+    userAnswer String?
+    feedback String
+    scorePerQuestion Float @default(0.0)
+
+    // FK setup interview
+    interviewId Int
+    interview Interview @relation(fields: [interviewId], references: [interviewId], onDelete: Cascade)
+
+    // FK setup videoQuestion
+    videoQuestionId Int
+    videoQuestion VideoQuestion @relation(fields: [videoQuestionId], references: [videoQuestionId])
+}
