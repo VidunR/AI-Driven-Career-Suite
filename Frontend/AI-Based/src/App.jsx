@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
 
-import { LandingPage } from "./components/LandingPage";
+import { LandingPage } from "./Components/LandingPage";
 import { LoginPage } from "./components/LoginPage";
-import { RegisterPage } from "./components/RegisterPage";
+import { RegisterPage } from "./Components/RegisterPage";
 import { Dashboard } from "./components/Dashboard";
 import { AppLayout } from "./components/Layout/AppLayout.jsx";
 import { CVManager } from "./components/CVManager";
 import { CVBuilder } from "./components/CVBuilder";
-import { JobSearch } from "./components/JobSearch";
+import JobSearch from "./Components/JobSearch";
 import { MockInterviewSetup } from "./components/MockInterviewSetup";
 import { MockInterviewSession } from "./components/MockInterviewSession";
 import { InterviewResults } from "./components/InterviewResults";

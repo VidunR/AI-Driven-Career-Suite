@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { Checkbox } from './ui/checkbox';
+import { useNavigate } from 'react-router-dom';
 import { Play, Settings, Clock, Users, BookOpen, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -28,6 +29,7 @@ export function MockInterviewSetup({ user, accessToken, onNavigate }) {
   const [newFocusArea, setNewFocusArea] = useState('');
   const [newCustomQuestion, setNewCustomQuestion] = useState('');
   const [isStarting, setIsStarting] = useState(false);
+  const navigate = useNavigate();
 
   const interviewTypes = [
     { value: 'behavioral', label: 'Behavioral Interview', description: 'Situation-based questions about your experience' },
@@ -105,7 +107,7 @@ export function MockInterviewSetup({ user, accessToken, onNavigate }) {
       await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
       
       toast.success('Interview session starting...');
-      onNavigate('mock-interview-session');
+      navigate('/mock-interview-session');
     } catch (error) {
       toast.error('Failed to start interview session');
     } finally {
@@ -140,7 +142,7 @@ export function MockInterviewSetup({ user, accessToken, onNavigate }) {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="jobTitle">Job Title *</Label>
+              <Label htmlFor="jobTitle" className="mb-2 block">Job Title *</Label>
               <Input
                 id="jobTitle"
                 placeholder="e.g., Senior Software Engineer"
@@ -149,7 +151,7 @@ export function MockInterviewSetup({ user, accessToken, onNavigate }) {
               />
             </div>
             <div>
-              <Label htmlFor="company">Company (Optional)</Label>
+              <Label htmlFor="company" className="mb-2 block">Company (Optional)</Label>
               <Input
                 id="company"
                 placeholder="e.g., Google, Microsoft, etc."
@@ -354,7 +356,7 @@ export function MockInterviewSetup({ user, accessToken, onNavigate }) {
 
           {/* Language Selection */}
           <div>
-            <Label htmlFor="language">Interview Language</Label>
+            <Label htmlFor="language" className="mb-2 block">Interview Language</Label>
             <Select 
               value={config.language} 
               onValueChange={(value) => setConfig(prev => ({ ...prev, language: value }))}

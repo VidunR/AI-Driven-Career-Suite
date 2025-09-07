@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
+import { useNavigate } from 'react-router-dom';
 import { Separator } from './ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { 
@@ -17,6 +18,7 @@ export function InterviewResults({ user, accessToken, onNavigate }) {
   const [questionResults, setQuestionResults] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const navigate = useNavigate();
 
   // Mock results data
   const mockResults = {
@@ -126,10 +128,10 @@ export function InterviewResults({ user, accessToken, onNavigate }) {
           <Button 
             variant="ghost" 
             size="sm"
-            onClick={() => onNavigate('interview-history')}
+            onClick={() => navigate('/dashboard')}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to History
+            Dashboard
           </Button>
           <div>
             <h1 className="text-3xl font-bold">Interview Results</h1>
@@ -145,7 +147,7 @@ export function InterviewResults({ user, accessToken, onNavigate }) {
             <Share2 className="h-4 w-4 mr-2" />
             Share Results
           </Button>
-          <Button size="sm" onClick={() => onNavigate('mock-interview-setup')}>
+          <Button size="sm" onClick={() => navigate('/mock-interview-setup')}>
             <RefreshCw className="h-4 w-4 mr-2" />
             New Interview
           </Button>
@@ -282,15 +284,15 @@ export function InterviewResults({ user, accessToken, onNavigate }) {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <Button className="w-full justify-start" onClick={() => onNavigate('mock-interview-setup')}>
+              <Button className="w-full justify-start" onClick={() => navigate('/mock-interview-session')}>
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Take Another Mock Interview
               </Button>
-              <Button variant="outline" className="w-full justify-start" onClick={() => onNavigate('job-search')}>
+              <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/job-search')}>
                 <TrendingUp className="h-4 w-4 mr-2" />
                 Browse Job Opportunities
               </Button>
-              <Button variant="outline" className="w-full justify-start" onClick={() => onNavigate('cv-builder')}>
+              <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/cv-manager')}>
                 <BookOpen className="h-4 w-4 mr-2" />
                 Update Your CV
               </Button>

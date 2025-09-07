@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { Button } from "../ui/button";
 import { Avatar, AvatarFallback } from "../ui/avatar";
+import { useNavigate } from 'react-router-dom';
 import {
   Award,
   Home,
@@ -22,6 +23,7 @@ export function AppLayout({ user, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  
 
   const currentPage = location.pathname.substring(1); // remove leading "/"
 
@@ -44,13 +46,17 @@ export function AppLayout({ user, onLogout }) {
   const SidebarContent = () => (
     <div className="h-full flex flex-col bg-sidebar border-r border-sidebar-border">
       {/* Logo */}
-      <div className="p-6 border-b border-sidebar-border">
-        <div className="flex items-center space-x-3">
+      <div className="p-4 border-b border-sidebar-border">
+        <div className="flex items-center gap-4">
           <div className="w-8 h-8 bg-sidebar-primary rounded-lg flex items-center justify-center">
-            <Award className="w-5 h-5 text-sidebar-primary-foreground" />
+            <img
+                src="/favicon_1.png"
+                alt="SkillSprint Logo"
+                className="w-8 h-8 object-cover rounded-md"
+              />
           </div>
           <span className="text-lg font-semibold text-sidebar-foreground">
-            AI Career Suite
+            SkillSprint
           </span>
         </div>
       </div>
@@ -111,7 +117,10 @@ export function AppLayout({ user, onLogout }) {
         <Button
           variant="ghost"
           className="w-full justify-start space-x-3 h-11 text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive"
-          onClick={onLogout}
+          onClick={() => {
+            onLogout();
+            navigate("/", { replace: true });
+          }}
         >
           <LogOut className="w-5 h-5" />
           <span>Logout</span>

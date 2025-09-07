@@ -4,12 +4,14 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Progress } from './ui/progress';
 import { Badge } from './ui/badge';
+import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { 
   Mic, MicOff, Video, VideoOff, Pause, Play, SkipForward, 
   Clock, MessageSquare, Bot, User, Volume2, VolumeX 
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Navigate } from 'react-router-dom';
 
 export function MockInterviewSession({ user, accessToken, onNavigate }) {
   const [isActive, setIsActive] = useState(false);
@@ -25,6 +27,7 @@ export function MockInterviewSession({ user, accessToken, onNavigate }) {
   const [showHints, setShowHints] = useState(false);
   const [interviewCompleted, setInterviewCompleted] = useState(false);
 
+  const navigate = useNavigate();
   const videoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const streamRef = useRef(null);
@@ -198,7 +201,7 @@ export function MockInterviewSession({ user, accessToken, onNavigate }) {
     setIsActive(false);
     setInterviewCompleted(true);
     cleanup();
-    
+     
     // Save final answer if exists
     if (currentAnswer.trim()) {
       const response = {
@@ -213,9 +216,9 @@ export function MockInterviewSession({ user, accessToken, onNavigate }) {
     toast.success('Interview completed!');
     
     // Navigate to results after a short delay
-    setTimeout(() => {
-      onNavigate('interview-results');
-    }, 2000);
+    
+    navigate('/interview-results');
+
   };
 
   const formatTime = (seconds) => {

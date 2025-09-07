@@ -155,7 +155,7 @@ export function Profile({ user, accessToken, onNavigate }) {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="fullName">Full Name</Label>
+                  <Label htmlFor="fullName" className="mb-2 block">Full Name</Label>
                   <Input
                     id="fullName"
                     value={profileData.fullName}
@@ -164,7 +164,7 @@ export function Profile({ user, accessToken, onNavigate }) {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="mb-2 block">Email</Label>
                   <Input
                     id="email"
                     type="email"
@@ -173,7 +173,7 @@ export function Profile({ user, accessToken, onNavigate }) {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="phone">Phone</Label>
+                  <Label htmlFor="phone" className="mb-2 block">Phone</Label>
                   <Input
                     id="phone"
                     value={profileData.phone}
@@ -182,7 +182,7 @@ export function Profile({ user, accessToken, onNavigate }) {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="location">Location</Label>
+                  <Label htmlFor="location" className="mb-2 block">Location</Label>
                   <Input
                     id="location"
                     value={profileData.location}
@@ -192,7 +192,7 @@ export function Profile({ user, accessToken, onNavigate }) {
                 </div>
               </div>
               <div>
-                <Label htmlFor="bio">Bio</Label>
+                <Label htmlFor="bio" className="mb-2 block">Bio</Label>
                 <Textarea
                   id="bio"
                   value={profileData.bio}
@@ -203,7 +203,7 @@ export function Profile({ user, accessToken, onNavigate }) {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="currentRole">Current Role</Label>
+                  <Label htmlFor="currentRole" className="mb-2 block">Current Role</Label>
                   <Input
                     id="currentRole"
                     value={profileData.currentRole}
@@ -212,7 +212,7 @@ export function Profile({ user, accessToken, onNavigate }) {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="targetRole">Target Role</Label>
+                  <Label htmlFor="targetRole" className="mb-2 block">Target Role</Label>
                   <Input
                     id="targetRole"
                     value={profileData.targetRole}
