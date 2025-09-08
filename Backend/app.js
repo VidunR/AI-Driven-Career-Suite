@@ -1,17 +1,17 @@
 import express from "express";
 import cors from "cors";
-import userRouter from "./routes/UserRoute.js";
-import projectRouter from "./routes/ProjectRoute.js"
+import dashboardRouter from "./routes/DashboardRoute.js";
+import authRouter from "./routes/AuthRouter.js"
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// Calls the user router
-app.use('/user', userRouter);
+// Calls the dashboard router
+app.use('/dashboard', dashboardRouter);
 
-// Calls the project router
-app.use('/project', projectRouter);
+// Calls the auth router
+app.use('/auth', authRouter);
 
 export default app;
