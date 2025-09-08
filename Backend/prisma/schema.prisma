@@ -32,7 +32,7 @@ model RegisteredUser {
   country      String?
   phoneNumber  String?
   address      String?
-  dob          DateTime @db.Date
+  dob          DateTime? @db.Date
   gender       String?
   bio          String?
   createdAt    DateTime @db.Date
