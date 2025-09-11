@@ -9,7 +9,4 @@ router.post('/register', userRegistrationRequest);
 // Login user
 router.post('/login', userLoginRequest);
 
-// Google register/ login
-router.post('/google', googleLogin)
-
 export default router;

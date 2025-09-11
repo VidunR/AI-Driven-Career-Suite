@@ -37,6 +37,8 @@ model RegisteredUser {
   bio          String?
   createdAt    DateTime @db.Date
   proImgPath   String?
+  currentProfessionalRole String?
+  targetProfessionalRole String?
 
   // Relation to preferences
   preferenceId Int
@@ -143,6 +145,7 @@ model Cv {
     cvId Int @id @default(autoincrement())
     cvFilepath String
     cvImagePath String
+    modifiedDate DateTime @db.Date
 
     // Foreign Key Setup
     userId Int
@@ -194,6 +197,7 @@ model VideoQuestion {
 model Interview {
     interviewId Int @id @default(autoincrement())
     interviewScore Float @default(0.0)
+    interviewDate DateTime @db.Date
 
     // FK setup user
     userId Int

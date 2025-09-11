@@ -5,6 +5,12 @@ export const getDashboardDetails = async(req, res) => {
     const userID = req.user.userId;
 
     try{
+        // Return the first and last name
+        const names = await prisma.registeredUser.findUnique({
+            where: {userId: parseInt(userID)},
+            select: {firstName: true, lastName: true}
+        });
+
         // Return all the cvs belongs to the user
         const cvResults = await prisma.cv.findMany({
             where: {userId: parseInt(userID)}
@@ -59,6 +65,8 @@ export const getDashboardDetails = async(req, res) => {
 
         return res.status(200).json(
             {
+                firstName: names.firstName,
+                lastName: names.lastName,
                 cvCount: cvResults.length || 0,
                 interviewCount: interviewResults.length || 0,
                 highestScore: highestInterviewScore,
