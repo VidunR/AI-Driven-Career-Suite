@@ -1,4 +1,4 @@
-import { googleLogin, userLoginRequest, userRegistrationRequest } from "../controllers/AuthController.js";
+import { googleLogin, linkedinLogin, userLoginRequest, userRegistrationRequest } from "../controllers/AuthController.js";
 import { Router } from "express";
 
 const router = Router();
@@ -10,6 +10,9 @@ router.post('/register', userRegistrationRequest);
 router.post('/login', userLoginRequest);
 
 // Google register/ login
-router.post('/google', googleLogin)
+router.post('/google', googleLogin);
+
+// LinkedIn register/login
+router.post('/linkedin', linkedinLogin);
 
 export default router;

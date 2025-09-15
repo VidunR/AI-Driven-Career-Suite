@@ -39,6 +39,7 @@ model RegisteredUser {
   proImgPath   String?
   currentProfessionalRole String?
   targetProfessionalRole String?
+  linkedInURL String?
 
   // Relation to preferences
   preferenceId Int
@@ -61,6 +62,9 @@ model RegisteredUser {
 
   // Relation to interview
   interview Interview[]
+
+  // Relation to achievements
+  achievement Achievement[]
 }
 
 // create Project
@@ -140,6 +144,17 @@ model Experience {
     user    RegisteredUser @relation(fields: [userId], references: [userId], onDelete: Cascade)
 }
 
+// Create achievement
+model Achievement {
+    achievementId Int @id @default(autoincrement())
+    achievementTitle String
+    achievementDescription String?
+
+    // Foreign Key Setup
+    userId Int
+    user RegisteredUser @relation(fields: [userId], references: [userId], onDelete: Cascade)
+}
+
 // Create cv
 model Cv {
     cvId Int @id @default(autoincrement())
@@ -198,6 +213,10 @@ model Interview {
     interviewId Int @id @default(autoincrement())
     interviewScore Float @default(0.0)
     interviewDate DateTime @db.Date
+    interviewDuration Int @default(0)
+    isCompleted Boolean @default(false)
+    completedPercentage Int @default(0)
+    experienceLevel String
 
     // FK setup user
     userId Int
@@ -209,6 +228,9 @@ model Interview {
 
     // Connect to interviewAnalysis
     interviewAnalysis InterviewAnalysis[]
+
+    // Realtionship with InterviewAnalysisPerformanceBreakdown
+    interview_performance_breakdown InterviewPerformanceBreakdown[]
 }
 
 // Create InterviewAnalysis
@@ -225,4 +247,25 @@ model InterviewAnalysis {
     // FK setup videoQuestion
     videoQuestionId Int
     videoQuestion VideoQuestion @relation(fields: [videoQuestionId], references: [videoQuestionId])
+}
+
+// Create PerformanceBreakdown
+model PerformanceBreakdown {
+    preformanceId Int @id @default(autoincrement())
+    preformanceName String
+    preformanceScore Int @default(0)
+
+    // Relationship with InterviewAnalysisPerformanceBreakdown
+    interview_performance_breakdown InterviewPerformanceBreakdown []
+}
+
+// Create InterviewPerformanceBreakdown
+model InterviewPerformanceBreakdown{
+    interviewId Int
+    performanceId Int
+
+    interview     Interview @relation(fields: [interviewId], references: [interviewId], onDelete: Cascade)
+    performance_breakdown       PerformanceBreakdown @relation(fields: [performanceId], references: [preformanceId])
+
+  @@id([interviewId, performanceId])
 }

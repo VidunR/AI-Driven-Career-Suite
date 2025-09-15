@@ -11,7 +11,7 @@ function capitalizeWords(wordSet){
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
 }
 
-// Normal Register and Login
+// Website Normal Register and Login
 
 // User Registration
 // POST: /auth/register
@@ -183,4 +183,87 @@ export const googleLogin = async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Google login failed" });
   }
+};
+
+// LinkedIn OAuth
+export const linkedinLogin = async (req, res) => {
+
+    const { code } = req.body;
+    const saltRounds = 10;
+
+    if (!code) return res.status(400).json({ error: "Authorization code is required" });
+
+    try {
+        // Exchange code for LinkedIn access token
+        const tokenResponse = await axios.post(
+        "https://www.linkedin.com/oauth/v2/accessToken",
+        null,
+        {
+            params: {
+            grant_type: "authorization_code",
+            code,
+            redirect_uri: process.env.LINKEDIN_REDIRECT_URI,
+            client_id: process.env.LINKEDIN_CLIENT_ID,
+            client_secret: process.env.LINKEDIN_CLIENT_SECRET,
+            },
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        }
+        );
+
+        const accessToken = tokenResponse.data.access_token;
+
+        // Get user profile info
+        const profileResponse = await axios.get("https://api.linkedin.com/v2/me", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        });
+
+        const emailResponse = await axios.get(
+        "https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))",
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+
+        const firstName = profileResponse.data.localizedFirstName || "";
+        const lastName = profileResponse.data.localizedLastName || "";
+        const email = emailResponse.data.elements[0]["handle~"].emailAddress;
+
+        // Check if user already exists
+        let user = await prisma.registeredUser.findUnique({ where: { email } });
+
+        if (!user) {
+        // New user, register with placeholder password
+        const defaultSettings = await prisma.settingsPreference.findFirst({
+            select: { preferenceId: true },
+            orderBy: { preferenceId: "asc" },
+        });
+
+        const hashedPassword = await bcrypt.hash(
+            process.env.GOOGLE_PASSWORD,
+            saltRounds
+        );
+
+        user = await prisma.registeredUser.create({
+            data: {
+            firstName: capitalizeWords(firstName),
+            lastName: capitalizeWords(lastName),
+            email: email,
+            hashedPassword: hashedPassword,
+            createdAt: new Date(),
+            preferenceId: parseInt(defaultSettings.preferenceId),
+            },
+        });
+        }
+
+        // Issue JWT like your other endpoints
+        const token = jwt.sign(
+        { userId: user.userId, email: user.email },
+        process.env.JWT_SECRET_KEY,
+        { expiresIn: process.env.JWT_EXPIRES_IN }
+        );
+
+        res.status(200).json({ message: "User logged in via LinkedIn", token });
+
+    } catch (err) {
+        console.error(err.response?.data || err.message);
+        res.status(500).json({ error: "LinkedIn login failed" });
+    }
 };

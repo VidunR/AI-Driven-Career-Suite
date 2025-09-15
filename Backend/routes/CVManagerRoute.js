@@ -1,12 +1,13 @@
-import { googleLogin, userLoginRequest, userRegistrationRequest } from "../controllers/AuthController.js";
 import { Router } from "express";
+import { authenticateToken } from "../middleware/AuthMiddleWare.js";
+import { deleteCV, getCVs } from "../controllers/CVManagerController.js";
 
 const router = Router();
 
-// Register User
-router.post('/register', userRegistrationRequest);
+// get all cvs
+router.get('', authenticateToken, getCVs);
 
 // Login user
-router.post('/login', userLoginRequest);
+router.delete('/{:cvID}', authenticateToken, deleteCV);
 
 export default router;

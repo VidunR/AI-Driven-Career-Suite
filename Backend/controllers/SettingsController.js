@@ -144,7 +144,6 @@ export const saveSettings = async (req, res) => {
     return res.status(200).json({ preferenceId: preference.preferenceId });
 
   } catch (err) {
-    console.error(err);
     return res.status(500).json({ errorMessage: `An error occurred: ${err}` });
   }
 };
