@@ -97,7 +97,7 @@ export function Dashboard({ user, accessToken, onNavigate }) {
       return user.user_metadata.firstName;
     }
     if (user?.email) {
-      return user.email.split("@")[0];
+      return user.name;
     }
     return "there";
   };
@@ -114,7 +114,7 @@ export function Dashboard({ user, accessToken, onNavigate }) {
       {/* Header */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold">
-          {getGreeting()}, {getUserName()}! 👋
+          {getGreeting()}, {getUserName()}!
         </h1>
         <p className="text-muted-foreground text-lg">
           Here's your career progress overview. Ready to take the next step?
