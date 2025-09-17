@@ -54,7 +54,7 @@ export const getPrivacyDetails = async (req, res) => {
             where: {preferenceId: parseInt(preferenceId)},
             select: {
                 publicProfileVisibility: true,
-                shareProgress: true
+                isanonymous: true
             }
         });
 
@@ -147,6 +147,28 @@ export const saveSettings = async (req, res) => {
     return res.status(500).json({ errorMessage: `An error occurred: ${err}` });
   }
 };
+
+
+// Get: /settings/account
+export const getEmail = async (req, res) => {
+    const userID = req.user.userId;
+
+    try{
+        const account = await prisma.registeredUser.findUnique({
+            where: {userId: parseInt(userID)},
+            select: {email: true}
+        });
+
+        if (!account){
+            res.status(404).json("Resource not found");
+        }
+
+        res.status(200).json(account);
+    }
+    catch(err){
+        return res.status(500).json({errorMessage: `An error occured: ${err}`});
+    }
+}
 
 
 // Delete: /settings/account

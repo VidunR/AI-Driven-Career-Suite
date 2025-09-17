@@ -10,11 +10,15 @@ import interviewresultsRouter from "./routes/InterviewResultRoute.js"
 import interviewRouter from './routes/InterviewRoute.js'
 import cvbuilderRouter from './routes/CvBuilderRoute.js'
 import cvmanagerRouter from './routes/CVManagerRoute.js'
+import applayoutRouter from './routes/AppLayoutRouter.js'
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Call Layout
+app.use('/applayout', applayoutRouter);
 
 // Calls the auth router
 app.use('/auth', authRouter);

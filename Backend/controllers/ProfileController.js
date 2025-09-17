@@ -98,7 +98,7 @@ export const getUserOverview = async(req, res) => {
             previousAverage = previousTotal / (totalInterviews - 1)
         }
 
-        const improvement = parseFloat(((avgMarks - previousAverage) / previousAverage) * 100).toFixed(1);
+        const improvement = parseFloat(((avgMarksRounded - previousAverage) / previousAverage) * 100).toFixed(1);
 
 
         res.status(200).json({
@@ -107,9 +107,9 @@ export const getUserOverview = async(req, res) => {
             profesisonalRole: userDetails.currentProfessionalRole,
             skils: skillNames,
             interviewCount: totalInterviews,
-            averageScore: avgMarks,
+            averageScore: avgMarksRounded,
             rank: interviewResults.length >= leaderboardEntryLevel ? userRank :
-                `${remainingInterviews} interview(s) remaining to qualify for the leaderboard.`,
+                `-`,
             improvement: improvement
         });
     }
@@ -137,7 +137,8 @@ export const getPersonalDetails = async(req, res) => {
                 address: true,
                 bio: true,
                 currentProfessionalRole: true,
-                targetProfessionalRole: true
+                targetProfessionalRole: true,
+                linkedInURL: true
             }
         })
 
@@ -238,5 +239,21 @@ export const getSkillDetails = async(req, res) => {
 // Delete Skill Detail
 
 export const deleteSkill = async(req, res) => {
+    const {experienceID} = req.params;
+    const userID = req.user.userId;
 
+    try{
+        const experienceResults = await prisma.experience.deleteMany({
+            where: {experienceId: parseInt(experienceID), userId: parseInt(userID)}
+        });
+
+        if (experienceResults.count === 0){
+            return res.status(404).json({message: "Resource not found."});   
+        }
+
+        return res.status(200).json({message: "Experience Details Successfully deleted."})
+    }
+    catch(err){
+        return res.status(500).json({errorMessage: `An error occured: ${err}`});
+    }
 }

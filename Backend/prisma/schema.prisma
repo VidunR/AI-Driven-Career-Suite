@@ -17,7 +17,7 @@ model SettingsPreference {
     pushNotification Boolean @default(false)
     interviewReminder Boolean @default(true)
     productUpdate Boolean @default(true)
-    shareProgress Boolean @default(true)
+    isanonymous Boolean @default(true)
 
     user RegisteredUser[]
 }
@@ -74,6 +74,7 @@ model Project {
   projectDescription String?
   startDate        DateTime? @db.Date
   endDate          DateTime? @db.Date
+  githublink       String?
 
   // Foreign key to user
   userId          Int
@@ -161,6 +162,7 @@ model Cv {
     cvFilepath String
     cvImagePath String
     modifiedDate DateTime @db.Date
+    cvName String @default("CV")
 
     // Foreign Key Setup
     userId Int

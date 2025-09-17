@@ -65,7 +65,7 @@ async function main() {
       pushNotification: true,
       interviewReminder: true,
       productUpdate: true,
-      shareProgress: true,
+      isanonymous: true,
     }
   });
 
@@ -207,7 +207,7 @@ async function main() {
       pushNotification: true,
       interviewReminder: false,
       productUpdate: true,
-      shareProgress: false,
+      isanonymous: false,
     }
   });
 
@@ -335,7 +335,7 @@ await prisma.achievement.create({
       pushNotification: false,
       interviewReminder: true,
       productUpdate: false,
-      shareProgress: true,
+      isanonymous: true,
     }
   });
 

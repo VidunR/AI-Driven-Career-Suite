@@ -71,7 +71,7 @@ export const getDashboardDetails = async(req, res) => {
                 interviewCount: interviewResults.length || 0,
                 highestScore: highestInterviewScore,
                 leaderboardRank: interviewResults.length >= leaderboardEntryLevel ? userRank : 
-                `${remainingInterviews} interview(s) remaining to qualify for the leaderboard.`
+                `-`
             }
         );
     }
