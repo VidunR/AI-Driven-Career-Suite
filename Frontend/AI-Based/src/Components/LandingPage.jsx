@@ -1,5 +1,6 @@
 import React from "react";
 import { Button } from "./ui/button";
+import { Link } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -91,13 +92,15 @@ export function LandingPage({ onLogin, onGetStarted }) {
               <span className="ml-2 mt-1 text-xl font-bold">SkillSprint</span>
             </div>
             <div className="flex items-center space-x-4">
-              {/* text says "Login" on the screenshot */}
-              <Button variant="ghost" onClick={onLogin}>
-                Login
-              </Button>
-              <Button onClick={onGetStarted}>
-                Get Started
-              </Button>
+              <Link to="/login">
+                <Button variant="ghost" type="button">
+                  Login
+                </Button>
+              </Link>
+
+              <Link to="/register">
+                <Button type="button">Get Started</Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -115,10 +118,12 @@ export function LandingPage({ onLogin, onGetStarted }) {
             {/* LEFT copy */}
             <div>
               {/* Big two-line heading */}
-              
+
               <h1 className="py-5 text-5xl font-bold mb-4 mt-4">
                 Your AI Career <br />
-                <span className="text-primary text-5xl font-bold">Companion</span>
+                <span className="text-primary text-5xl font-bold">
+                  Companion
+                </span>
               </h1>
 
               <p className="text-xl text-muted-foreground">
@@ -148,23 +153,27 @@ export function LandingPage({ onLogin, onGetStarted }) {
               </div>
 
               {/* buttons row */}
-              <div className="py-4  flex items-center gap-4">
-                <Button
-                  size="lg"
-                  onClick={onGetStarted}
-                  className="px-6 py-3 font-semibold"
-                >
-                  Get Started Free
-                  
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  onClick={onLogin}
-                  className="px-6 py-3"
-                >
-                  Login
-                </Button>
+              <div className="py-4 flex items-center gap-4">
+                <Link to="/register">
+                  <Button
+                    size="lg"
+                    className="px-6 py-3 font-semibold"
+                    type="button"
+                  >
+                    Get Started Free
+                  </Button>
+                </Link>
+
+                <Link to="/login">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="px-6 py-3"
+                    type="button"
+                  >
+                    Login
+                  </Button>
+                </Link>
               </div>
             </div>
 
@@ -199,7 +208,7 @@ export function LandingPage({ onLogin, onGetStarted }) {
                     aria-hidden
                     className="h-10 rounded-lg bg-primary/20 ring-1 ring-white/10 shadow-inner"
                   />
-                  
+
                   <div
                     aria-hidden
                     className="h-10 rounded-lg bg-primary/20 ring-1 ring-white/10 shadow-inner"
@@ -222,12 +231,16 @@ export function LandingPage({ onLogin, onGetStarted }) {
               Everything You Need to Succeed
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Comprehensive tools powered by AI to accelerate your career journey
+              Comprehensive tools powered by AI to accelerate your career
+              journey
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
-              <Card key={index} className="border-border bg-background text-center">
+              <Card
+                key={index}
+                className="border-border bg-background text-center"
+              >
                 <CardHeader>
                   <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4 mx-auto">
                     <feature.icon className="w-6 h-6 text-primary" />
@@ -247,7 +260,9 @@ export function LandingPage({ onLogin, onGetStarted }) {
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">Trusted by Professionals</h2>
+            <h2 className="text-3xl font-bold mb-4">
+              Trusted by Professionals
+            </h2>
             <p className="text-muted-foreground text-lg">
               See how AI Career Suite has helped others advance their careers
             </p>
@@ -256,7 +271,6 @@ export function LandingPage({ onLogin, onGetStarted }) {
             {testimonials.map((t, index) => (
               <Card key={index} className="border-border bg-card">
                 <CardHeader>
-                  
                   <CardDescription className="text-foreground leading-relaxed">
                     “{t.content}”
                   </CardDescription>
@@ -299,7 +313,6 @@ export function LandingPage({ onLogin, onGetStarted }) {
       <footer className="border-t border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
-
             {/* Brand */}
             <div>
               <div className="flex items-center">
@@ -313,7 +326,8 @@ export function LandingPage({ onLogin, onGetStarted }) {
                 <span className="ml-2 text-lg font-semibold">SkillSprint</span>
               </div>
               <p className="py-3 mt-3 text-sm text-muted-foreground max-w-xs">
-                Your AI-powered career <br/>development platform
+                Your AI-powered career <br />
+                development platform
               </p>
             </div>
 
@@ -321,10 +335,38 @@ export function LandingPage({ onLogin, onGetStarted }) {
             <div>
               <h4 className="text-sm font-semibold mb-3">Product</h4>
               <ul className="space-y-2 text-sm">
-                <li><a className="text-muted-foreground hover:text-foreground transition-colors" href="#">CV Builder</a></li>
-                <li><a className="text-muted-foreground hover:text-foreground transition-colors" href="#">Job Search</a></li>
-                <li><a className="text-muted-foreground hover:text-foreground transition-colors" href="#">Mock Interviews</a></li>
-                <li><a className="text-muted-foreground hover:text-foreground transition-colors" href="#">Analytics</a></li>
+                <li>
+                  <a
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    href="#"
+                  >
+                    CV Builder
+                  </a>
+                </li>
+                <li>
+                  <a
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    href="#"
+                  >
+                    Job Search
+                  </a>
+                </li>
+                <li>
+                  <a
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    href="#"
+                  >
+                    Mock Interviews
+                  </a>
+                </li>
+                <li>
+                  <a
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    href="#"
+                  >
+                    Analytics
+                  </a>
+                </li>
               </ul>
             </div>
 
@@ -332,10 +374,38 @@ export function LandingPage({ onLogin, onGetStarted }) {
             <div>
               <h4 className="text-sm font-semibold mb-3">Company</h4>
               <ul className="space-y-2 text-sm">
-                <li><a className="text-muted-foreground hover:text-foreground transition-colors" href="#">About</a></li>
-                <li><a className="text-muted-foreground hover:text-foreground transition-colors" href="#">Careers</a></li>
-                <li><a className="text-muted-foreground hover:text-foreground transition-colors" href="#">Contact</a></li>
-                <li><a className="text-muted-foreground hover:text-foreground transition-colors" href="#">Blog</a></li>
+                <li>
+                  <a
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    href="./About-Us"
+                  >
+                    About
+                  </a>
+                </li>
+                <li>
+                  <a
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    href="./Careers"
+                  >
+                    Careers
+                  </a>
+                </li>
+                <li>
+                  <a
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    href="./Contact"
+                  >
+                    Contact
+                  </a>
+                </li>
+                <li>
+                  <a
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    href="./Blog"
+                  >
+                    Blog
+                  </a>
+                </li>
               </ul>
             </div>
 
@@ -343,10 +413,38 @@ export function LandingPage({ onLogin, onGetStarted }) {
             <div>
               <h4 className="text-sm font-semibold mb-3">Support</h4>
               <ul className="space-y-2 text-sm">
-                <li><a className="text-muted-foreground hover:text-foreground transition-colors" href="#">Help Center</a></li>
-                <li><a className="text-muted-foreground hover:text-foreground transition-colors" href="#">Privacy Policy</a></li>
-                <li><a className="text-muted-foreground hover:text-foreground transition-colors" href="#">Terms of Service</a></li>
-                <li><a className="text-muted-foreground hover:text-foreground transition-colors" href="#">Status</a></li>
+                <li>
+                  <a
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    href="#"
+                  >
+                    Help Center
+                  </a>
+                </li>
+                <li>
+                  <a
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    href="#"
+                  >
+                    Privacy Policy
+                  </a>
+                </li>
+                <li>
+                  <a
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    href="#"
+                  >
+                    Terms of Service
+                  </a>
+                </li>
+                <li>
+                  <a
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    href="#"
+                  >
+                    Status
+                  </a>
+                </li>
               </ul>
             </div>
           </div>
@@ -359,9 +457,24 @@ export function LandingPage({ onLogin, onGetStarted }) {
               © {new Date().getFullYear()} SkillSprint. All rights reserved.
             </p>
             <div className="flex items-center gap-4 text-xs">
-              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Security</a>
-              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Cookie Settings</a>
-              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Docs</a>
+              <a
+                href="#"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Security
+              </a>
+              <a
+                href="#"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Cookie Settings
+              </a>
+              <a
+                href="#"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Docs
+              </a>
             </div>
           </div>
         </div>

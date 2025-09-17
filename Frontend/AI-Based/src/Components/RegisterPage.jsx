@@ -1,133 +1,138 @@
-import React, { useState } from 'react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
-import { Alert, AlertDescription } from './ui/alert';
-import { ArrowLeft, Eye, EyeOff, Users } from 'lucide-react';
-import { signUp } from '../utils/supabase/client';
-import { toast } from 'sonner';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "./ui/card";
+import { Alert, AlertDescription } from "./ui/alert";
+import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 
-export function RegisterPage({ onRegister, onLogin, onBack }) {
+const countries = [
+  "Sri Lanka",
+  "India",
+  "United States",
+  "United Kingdom",
+  "Australia",
+  "Canada",
+  "Germany",
+  "France",
+  "Japan",
+  "China",
+  "Singapore",
+];
+
+export function RegisterPage({ onBack }) {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
+    firstName: "",
+    lastName: "",
+    email: "",
+    country: "",
+    password: "",
+    confirmPassword: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
+  const [validation, setValidation] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
-  };
-
-  const validateForm = () => {
-    const { firstName, lastName, email, password, confirmPassword } = formData;
-    
-    if (!firstName || !lastName || !email || !password || !confirmPassword) {
-      return 'Please fill in all fields';
-    }
-    
-    if (password.length < 6) {
-      return 'Password must be at least 6 characters long';
-    }
-    
-    if (password !== confirmPassword) {
-      return 'Passwords do not match';
-    }
-    
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return 'Please enter a valid email address';
-    }
-    
-    return null;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    const validationError = validateForm();
-    if (validationError) {
-      setError(validationError);
+    setIsSubmitting(true);
+    setError("");
+
+    // if any validation errors exist, show generic error
+    if (Object.keys(validation).length > 0) {
+      setError("Please enter valid data.");
+      setIsSubmitting(false);
       return;
     }
 
     setIsLoading(true);
-    setError('');
-
     try {
-      const fullName = `${formData.firstName} ${formData.lastName}`;
-      const { user, error: signUpError } = await signUp(fullName, formData.email, formData.password);
-      
-      if (signUpError) {
-        throw new Error(signUpError);
-      }
+      const response = await axios.post(
+        "http://localhost:5000/auth/register",
+        formData
+      );
 
-      if (user) {
-        // For registration, we'll simulate a successful login with mock data
-        const userData = {
-          id: user.id,
-          name: fullName,
-          email: formData.email,
-          cvCount: 0,
-          interviewCount: 0
-        };
-        const mockToken = 'mock_access_token';
-        onRegister(userData, mockToken);
-      } else {
-        throw new Error('Registration failed - no user data received');
+      if (response.data && response.data.newUser) {
+        // Registration successful → move to login
+        navigate("/login");
       }
     } catch (err) {
-      setError(err.message || 'Registration failed. Please try again.');
+      setError("Registration failed. Please try again.");
     } finally {
       setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
+  useEffect(() => {
+    const newValidation = {};
+    const { firstName, lastName, email, country, password, confirmPassword } =
+      formData;
+
+    if (firstName && (firstName.length < 2 || firstName.length > 50)) {
+      newValidation.firstName =
+        "First name must be between 2 and 50 characters.";
+    }
+    if (lastName && (lastName.length < 2 || lastName.length > 50)) {
+      newValidation.lastName = "Last name must be between 2 and 50 characters.";
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email && !emailRegex.test(email)) {
+      newValidation.email = "Please enter a valid email address.";
+    }
+    if (isSubmitting && !country) {
+      newValidation.country = "Please select a country.";
+    }
+    const passwordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+    if (password && !passwordRegex.test(password)) {
+      newValidation.password =
+        "Password must be at least 8 characters, include uppercase, lowercase, number, and special character.";
+    }
+    if (confirmPassword && confirmPassword !== password) {
+      newValidation.confirmPassword = "Passwords do not match.";
+    }
+
+    setValidation(newValidation);
+  }, [formData, isSubmitting]);
+
   return (
-  <div className="min-h-screen bg-background p-4">
-    {/* Back button in the top-left corner */}
-    <div className="mb-4">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={onBack}
-        className="inline-flex items-center gap-2 px-2"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back
-      </Button>
-
-      {/* Header */}
-      <div className="text-center mb-8">        
-        <div className="flex items-center justify-center mb-4">
-          <div className="w-8 h-8 mb-4 rounded-lg flex items-center justify-center">
-              <img
-                src="/favicon_1.png"
-                alt="SkillSprint Logo"
-                className="w-8 h-8 object-cover rounded-md mb-2"
-              />
-            <span className="ml-2 text-lg font-semibold">SkillSprint</span>
-          </div>
-            
-        </div>
-      </div>
-
-    </div>
-
-    <div className=" bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background p-4 flex items-center justify-center">
       <div className="w-full max-w-md">
-        
+        {/* Back button */}
+        <div className="mb-4">
+          <Link to="./landing-page">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onBack}
+              className="inline-flex items-center gap-2 px-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+          </Link>
+        </div>
 
-        {/* Registration Card */}
         <Card className="border-border">
           <CardHeader className="space-y-1 text-center mb-2">
             <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
@@ -142,58 +147,102 @@ export function RegisterPage({ onRegister, onLogin, onBack }) {
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
+                  <Label>
+                    First Name <span className="text-red-500">*</span>
+                  </Label>
                   <Input
-                    id="firstName"
                     type="text"
-                    placeholder="First name"
                     value={formData.firstName}
-                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("firstName", e.target.value)
+                    }
                     disabled={isLoading}
-                    required
                   />
+                  {validation.firstName && (
+                    <p className="text-red-500 text-xs">
+                      {validation.firstName}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
+                  <Label>
+                    Last Name <span className="text-red-500">*</span>
+                  </Label>
                   <Input
-                    id="lastName"
                     type="text"
-                    placeholder="Last name"
                     value={formData.lastName}
-                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("lastName", e.target.value)
+                    }
                     disabled={isLoading}
-                    required
                   />
+                  {validation.lastName && (
+                    <p className="text-red-500 text-xs">
+                      {validation.lastName}
+                    </p>
+                  )}
                 </div>
               </div>
-              
+
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label>
+                  Email <span className="text-red-500">*</span>
+                </Label>
                 <Input
-                  id="email"
                   type="email"
-                  placeholder="Enter your email"
                   value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("email", e.target.value)
+                  }
                   disabled={isLoading}
-                  required
                 />
+                {validation.email && (
+                  <p className="text-red-500 text-xs">{validation.email}</p>
+                )}
               </div>
-              
+
+              {/* Country dropdown */}
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label>
+                  Country <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
+                  <select
+                    className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition"
+                    value={formData.country}
+                    onChange={(e) =>
+                      handleInputChange("country", e.target.value)
+                    }
+                    disabled={isLoading}
+                  >
+                    <option value="">Select a country</option>
+                    {countries.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {validation.country && (
+                  <p className="text-red-500 text-xs">{validation.country}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>
+                  Password <span className="text-red-500">*</span>
+                </Label>
                 <div className="relative">
                   <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Create a password (min. 6 characters)"
+                    type={showPassword ? "text" : "password"}
                     value={formData.password}
-                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("password", e.target.value)
+                    }
                     disabled={isLoading}
-                    required
                   />
                   <Button
                     type="button"
@@ -201,79 +250,112 @@ export function RegisterPage({ onRegister, onLogin, onBack }) {
                     size="sm"
                     className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowPassword(!showPassword)}
-                    disabled={isLoading}
                   >
-                    {showPassword ? (
+                    {!showPassword ? (
                       <EyeOff className="h-4 w-4" />
                     ) : (
                       <Eye className="h-4 w-4" />
                     )}
                   </Button>
                 </div>
+                {validation.password && (
+                  <p className="text-red-500 text-xs">{validation.password}</p>
+                )}
               </div>
-              
+
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Label>
+                  Confirm Password <span className="text-red-500">*</span>
+                </Label>
                 <div className="relative">
                   <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    placeholder="Confirm your password"
+                    type={showConfirmPassword ? "text" : "password"}
                     value={formData.confirmPassword}
-                    onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("confirmPassword", e.target.value)
+                    }
                     disabled={isLoading}
-                    required
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    disabled={isLoading}
+                    onClick={() =>
+                      setShowConfirmPassword(!showConfirmPassword)
+                    }
                   >
-                    {showConfirmPassword ? (
+                    {!showConfirmPassword ? (
                       <EyeOff className="h-4 w-4" />
                     ) : (
                       <Eye className="h-4 w-4" />
                     )}
                   </Button>
                 </div>
-              </div>
-              
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Creating Account...
-                  </div>
-                ) : (
-                  'Create Account'
+                {validation.confirmPassword && (
+                  <p className="text-red-500 text-xs">
+                    {validation.confirmPassword}
+                  </p>
                 )}
+              </div>
+
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Creating Account..." : "Create Account"}
               </Button>
             </form>
-            
+
+            {/* Divider */}
+            <div className="flex items-center my-6 mt-4">
+              <div className="flex-1 h-px bg-border" />
+              <span className="px-3 text-xs text-muted-foreground">or</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+
+            {/* Social login buttons */}
+            <div className="mt-4 flex gap-3">
+              <Button
+                type="button"
+                className="flex-1 flex items-center justify-center gap-2 bg-primary text-white hover:opacity-90"
+                onClick={() => console.log("Google login")}
+              >
+                <img
+                  src="https://www.svgrepo.com/show/475656/google-color.svg"
+                  alt="Google"
+                  className="h-5 w-5 bg-white rounded-sm"
+                />
+                Google
+              </Button>
+
+              <Button
+                type="button"
+                className="flex-1 flex items-center justify-center gap-2 bg-primary text-white hover:opacity-90"
+                onClick={() => console.log("LinkedIn login")}
+              >
+                <img
+                  src="https://www.svgrepo.com/show/448234/linkedin.svg"
+                  alt="LinkedIn"
+                  className="h-5 w-5 bg-white rounded-sm"
+                />
+                LinkedIn
+              </Button>
+            </div>
+
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">
-                Already have an account?{' '}
-                <Button
-                  variant="link"
-                  onClick={onLogin}
-                  className="p-0 h-auto font-normal text-primary hover:text-primary/80"
-                >
-                  Sign in
-                </Button>
+                Already have an account?{" "}
+                <Link to="/login">
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto font-normal text-primary"
+                  >
+                    Sign in
+                  </Button>
+                </Link>
               </p>
             </div>
           </CardContent>
         </Card>
-        
       </div>
     </div>
-  </div>
- );
+  );
 }
