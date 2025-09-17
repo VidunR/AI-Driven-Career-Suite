@@ -17,7 +17,7 @@ model SettingsPreference {
     pushNotification Boolean @default(false)
     interviewReminder Boolean @default(true)
     productUpdate Boolean @default(true)
-    shareProgress Boolean @default(true)
+    isanonymous Boolean @default(true)
 
     user RegisteredUser[]
 }
@@ -37,6 +37,9 @@ model RegisteredUser {
   bio          String?
   createdAt    DateTime @db.Date
   proImgPath   String?
+  currentProfessionalRole String?
+  targetProfessionalRole String?
+  linkedInURL String?
 
   // Relation to preferences
   preferenceId Int
@@ -59,6 +62,9 @@ model RegisteredUser {
 
   // Relation to interview
   interview Interview[]
+
+  // Relation to achievements
+  achievement Achievement[]
 }
 
 // create Project
@@ -68,6 +74,7 @@ model Project {
   projectDescription String?
   startDate        DateTime? @db.Date
   endDate          DateTime? @db.Date
+  githublink       String?
 
   // Foreign key to user
   userId          Int
@@ -138,11 +145,24 @@ model Experience {
     user    RegisteredUser @relation(fields: [userId], references: [userId], onDelete: Cascade)
 }
 
+// Create achievement
+model Achievement {
+    achievementId Int @id @default(autoincrement())
+    achievementTitle String
+    achievementDescription String?
+
+    // Foreign Key Setup
+    userId Int
+    user RegisteredUser @relation(fields: [userId], references: [userId], onDelete: Cascade)
+}
+
 // Create cv
 model Cv {
     cvId Int @id @default(autoincrement())
     cvFilepath String
     cvImagePath String
+    modifiedDate DateTime @db.Date
+    cvName String @default("CV")
 
     // Foreign Key Setup
     userId Int
@@ -194,6 +214,11 @@ model VideoQuestion {
 model Interview {
     interviewId Int @id @default(autoincrement())
     interviewScore Float @default(0.0)
+    interviewDate DateTime @db.Date
+    interviewDuration Int @default(0)
+    isCompleted Boolean @default(false)
+    completedPercentage Int @default(0)
+    experienceLevel String
 
     // FK setup user
     userId Int
@@ -205,6 +230,9 @@ model Interview {
 
     // Connect to interviewAnalysis
     interviewAnalysis InterviewAnalysis[]
+
+    // Realtionship with InterviewAnalysisPerformanceBreakdown
+    interview_performance_breakdown InterviewPerformanceBreakdown[]
 }
 
 // Create InterviewAnalysis
@@ -221,4 +249,25 @@ model InterviewAnalysis {
     // FK setup videoQuestion
     videoQuestionId Int
     videoQuestion VideoQuestion @relation(fields: [videoQuestionId], references: [videoQuestionId])
+}
+
+// Create PerformanceBreakdown
+model PerformanceBreakdown {
+    preformanceId Int @id @default(autoincrement())
+    preformanceName String
+    preformanceScore Int @default(0)
+
+    // Relationship with InterviewAnalysisPerformanceBreakdown
+    interview_performance_breakdown InterviewPerformanceBreakdown []
+}
+
+// Create InterviewPerformanceBreakdown
+model InterviewPerformanceBreakdown{
+    interviewId Int
+    performanceId Int
+
+    interview     Interview @relation(fields: [interviewId], references: [interviewId], onDelete: Cascade)
+    performance_breakdown       PerformanceBreakdown @relation(fields: [performanceId], references: [preformanceId])
+
+  @@id([interviewId, performanceId])
 }

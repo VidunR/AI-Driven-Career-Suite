@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `cv` ADD COLUMN `cvName` VARCHAR(191) NOT NULL DEFAULT 'CV';

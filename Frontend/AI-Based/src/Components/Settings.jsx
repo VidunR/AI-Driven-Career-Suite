@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -7,40 +8,126 @@ import { Switch } from './ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Separator } from './ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Bell, Shield, User, Globe, Moon, Volume2, Trash2, Download } from 'lucide-react';
+import { Bell, Shield, User, Globe, Trash2, Download } from 'lucide-react';
 import { toast } from 'sonner';
 
-export function Settings({ user, accessToken, onNavigate }) {
+export function Settings({ user, onNavigate }) {
+  const token = localStorage.getItem("jwtToken");
+
+  const [activeTab, setActiveTab] = useState("notifications");
   const [settings, setSettings] = useState({
     notifications: {
-      email: true,
+      email: false,
       push: false,
-      interviews: true,
-      updates: false
+      interviews: false,
+      updates: false,
     },
     privacy: {
-      profileVisibility: 'public',
+      profileVisibility: "private", 
       shareProgress: true,
-      anonymousMode: false
+      anonymousMode: false,
     },
     preferences: {
-      language: 'english',
-      timezone: 'UTC',
-      theme: 'dark',
-      soundEffects: true
-    }
+      language: "english",
+      timezone: "UTC",
+      theme: "dark",
+      soundEffects: true,
+    },
   });
 
+  const [accountData, setAccountData] = useState(null);
+
+
+  // Fetch settings when tab changes
+  useEffect(() => {
+  if (!token) {
+    toast.error("User not authenticated");
+    return;
+  }
+
+  const fetchData = async () => {
+    try {
+      let url = "";
+      if (activeTab === "account") {
+        url = "http://localhost:5000/settings/account";
+      } else if (activeTab === "notifications") {
+        url = "http://localhost:5000/settings/notifications";
+      } else if (activeTab === "privacy") {
+        url = "http://localhost:5000/settings/privacy";
+      } else if (activeTab === "preferences") {
+        url = "http://localhost:5000/settings/preference";
+      }
+
+      if (!url) return;
+
+      const res = await axios.get(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = res.data;
+
+      if (activeTab === "account") {
+        setSettings((prev) => ({
+          ...prev,
+          account: {
+            email: data.email, // <- from backend response
+          },
+        }));
+      }
+
+      if (activeTab === "notifications") {
+        setSettings((prev) => ({
+          ...prev,
+          notifications: {
+            email: data.emailNotification,
+            push: data.pushNotification,
+            interviews: data.interviewReminder,
+            updates: data.productUpdate,
+          },
+        }));
+      }
+
+      if (activeTab === "privacy") {
+        setSettings((prev) => ({
+          ...prev,
+          privacy: {
+            profileVisibility: data.publicProfileVisibility ? "public" : "private",
+            anonymousMode: data.isanonymous,
+          },
+        }));
+      }
+
+      if (activeTab === "preferences") {
+        setSettings((prev) => ({
+          ...prev,
+          preferences: {
+            ...prev.preferences,
+            language: data.language?.toLowerCase() || "english",
+            soundEffects: data.soundEffect,
+          },
+        }));
+      }
+    } catch (err) {
+      console.error("Error fetching settings:", err);
+      toast.error("Failed to load settings");
+    }
+  };
+
+  fetchData();
+}, [activeTab, token]);
+
+
   const handleSave = () => {
-    toast.success('Settings saved successfully');
+    toast.success("Settings saved successfully");
+    // Optional: send updated settings back to backend
   };
 
   const exportData = () => {
-    toast.success('Data export started. You will receive an email when ready.');
+    toast.success("Data export started. You will receive an email when ready.");
   };
 
   const deleteAccount = () => {
-    toast.error('Account deletion requested. Please contact support to confirm.');
+    toast.error("Account deletion requested. Please contact support to confirm.");
   };
 
   return (
@@ -50,7 +137,7 @@ export function Settings({ user, accessToken, onNavigate }) {
         <p className="text-muted-foreground">Manage your account settings and preferences</p>
       </div>
 
-      <Tabs defaultValue="notifications" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="privacy">Privacy</TabsTrigger>
@@ -58,6 +145,7 @@ export function Settings({ user, accessToken, onNavigate }) {
           <TabsTrigger value="account">Account</TabsTrigger>
         </TabsList>
 
+        {/* Notifications */}
         <TabsContent value="notifications" className="space-y-6">
           <Card>
             <CardHeader>
@@ -71,68 +159,58 @@ export function Settings({ user, accessToken, onNavigate }) {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label>Email Notifications</Label>
-                    <p className="text-sm text-muted-foreground">Receive notifications via email</p>
                   </div>
                   <Switch
                     checked={settings.notifications.email}
                     onCheckedChange={(checked) =>
-                      setSettings(prev => ({
+                      setSettings((prev) => ({
                         ...prev,
-                        notifications: { ...prev.notifications, email: checked }
+                        notifications: { ...prev.notifications, email: checked },
                       }))
                     }
                   />
                 </div>
-                
                 <Separator />
-                
                 <div className="flex items-center justify-between">
                   <div>
                     <Label>Push Notifications</Label>
-                    <p className="text-sm text-muted-foreground">Receive push notifications in browser</p>
                   </div>
                   <Switch
                     checked={settings.notifications.push}
                     onCheckedChange={(checked) =>
-                      setSettings(prev => ({
+                      setSettings((prev) => ({
                         ...prev,
-                        notifications: { ...prev.notifications, push: checked }
+                        notifications: { ...prev.notifications, push: checked },
                       }))
                     }
                   />
                 </div>
-                
                 <Separator />
-                
                 <div className="flex items-center justify-between">
                   <div>
                     <Label>Interview Reminders</Label>
-                    <p className="text-sm text-muted-foreground">Get reminded about scheduled interviews</p>
                   </div>
                   <Switch
                     checked={settings.notifications.interviews}
                     onCheckedChange={(checked) =>
-                      setSettings(prev => ({
+                      setSettings((prev) => ({
                         ...prev,
-                        notifications: { ...prev.notifications, interviews: checked }
+                        notifications: { ...prev.notifications, interviews: checked },
                       }))
                     }
                   />
                 </div>
-                
                 <Separator />
-                
                 <div className="flex items-center justify-between">
                   <div>
                     <Label>Product Updates</Label>
-                    <p className="text-sm text-muted-foreground">Notifications about new features and updates</p>
                   </div>
                   <Switch
                     checked={settings.notifications.updates}
                     onCheckedChange={(checked) =>
-                      setSettings(prev => ({
+                      setSettings((prev) => ({
                         ...prev,
-                        notifications: { ...prev.notifications, updates: checked }
+                        notifications: { ...prev.notifications, updates: checked },
                       }))
                     }
                   />
@@ -142,6 +220,7 @@ export function Settings({ user, accessToken, onNavigate }) {
           </Card>
         </TabsContent>
 
+        {/* Privacy */}
         <TabsContent value="privacy" className="space-y-6">
           <Card>
             <CardHeader>
@@ -157,9 +236,9 @@ export function Settings({ user, accessToken, onNavigate }) {
                   <Select
                     value={settings.privacy.profileVisibility}
                     onValueChange={(value) =>
-                      setSettings(prev => ({
+                      setSettings((prev) => ({
                         ...prev,
-                        privacy: { ...prev.privacy, profileVisibility: value }
+                        privacy: { ...prev.privacy, profileVisibility: value },
                       }))
                     }
                   >
@@ -173,38 +252,17 @@ export function Settings({ user, accessToken, onNavigate }) {
                     </SelectContent>
                   </Select>
                 </div>
-                
                 <Separator />
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Share Progress</Label>
-                    <p className="text-sm text-muted-foreground">Allow others to see your interview progress</p>
-                  </div>
-                  <Switch
-                    checked={settings.privacy.shareProgress}
-                    onCheckedChange={(checked) =>
-                      setSettings(prev => ({
-                        ...prev,
-                        privacy: { ...prev.privacy, shareProgress: checked }
-                      }))
-                    }
-                  />
-                </div>
-                
-                <Separator />
-                
                 <div className="flex items-center justify-between">
                   <div>
                     <Label>Anonymous Mode</Label>
-                    <p className="text-sm text-muted-foreground">Hide your identity on leaderboards</p>
                   </div>
                   <Switch
                     checked={settings.privacy.anonymousMode}
                     onCheckedChange={(checked) =>
-                      setSettings(prev => ({
+                      setSettings((prev) => ({
                         ...prev,
-                        privacy: { ...prev.privacy, anonymousMode: checked }
+                        privacy: { ...prev.privacy, anonymousMode: checked },
                       }))
                     }
                   />
@@ -214,6 +272,7 @@ export function Settings({ user, accessToken, onNavigate }) {
           </Card>
         </TabsContent>
 
+        {/* Preferences */}
         <TabsContent value="preferences" className="space-y-6">
           <Card>
             <CardHeader>
@@ -229,9 +288,9 @@ export function Settings({ user, accessToken, onNavigate }) {
                   <Select
                     value={settings.preferences.language}
                     onValueChange={(value) =>
-                      setSettings(prev => ({
+                      setSettings((prev) => ({
                         ...prev,
-                        preferences: { ...prev.preferences, language: value }
+                        preferences: { ...prev.preferences, language: value },
                       }))
                     }
                   >
@@ -246,44 +305,18 @@ export function Settings({ user, accessToken, onNavigate }) {
                     </SelectContent>
                   </Select>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label>Timezone</Label>
-                  <Select
-                    value={settings.preferences.timezone}
-                    onValueChange={(value) =>
-                      setSettings(prev => ({
-                        ...prev,
-                        preferences: { ...prev.preferences, timezone: value }
-                      }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="UTC">UTC</SelectItem>
-                      <SelectItem value="EST">Eastern Time</SelectItem>
-                      <SelectItem value="PST">Pacific Time</SelectItem>
-                      <SelectItem value="GMT">GMT</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
-              
               <Separator />
-              
               <div className="flex items-center justify-between">
                 <div>
                   <Label>Sound Effects</Label>
-                  <p className="text-sm text-muted-foreground">Play sounds for notifications and actions</p>
                 </div>
                 <Switch
                   checked={settings.preferences.soundEffects}
                   onCheckedChange={(checked) =>
-                    setSettings(prev => ({
+                    setSettings((prev) => ({
                       ...prev,
-                      preferences: { ...prev.preferences, soundEffects: checked }
+                      preferences: { ...prev.preferences, soundEffects: checked },
                     }))
                   }
                 />
@@ -292,6 +325,7 @@ export function Settings({ user, accessToken, onNavigate }) {
           </Card>
         </TabsContent>
 
+        {/* Account */}
         <TabsContent value="account" className="space-y-6">
           <Card>
             <CardHeader>
@@ -304,14 +338,12 @@ export function Settings({ user, accessToken, onNavigate }) {
               <div className="space-y-4">
                 <div>
                   <Label className="mb-2 block">Account Email</Label>
-                  <Input value={user.email} disabled />
+                  <Input value={settings.account?.email || ""} disabled />
                   <p className="text-sm text-muted-foreground mt-1">
                     Contact support to change your email address
                   </p>
                 </div>
-                
                 <Separator />
-                
                 <div className="space-y-4">
                   <h4 className="font-medium">Data Management</h4>
                   <div className="flex gap-4">
@@ -321,14 +353,9 @@ export function Settings({ user, accessToken, onNavigate }) {
                     </Button>
                   </div>
                 </div>
-                
                 <Separator />
-                
                 <div className="space-y-4">
                   <h4 className="font-medium text-red-600">Danger Zone</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Once you delete your account, there is no going back. Please be certain.
-                  </p>
                   <Button variant="destructive" onClick={deleteAccount}>
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete Account

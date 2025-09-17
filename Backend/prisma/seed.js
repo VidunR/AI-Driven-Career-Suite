@@ -1,9 +1,61 @@
 // prisma/seed.js
-import { PrismaClient } from '@prisma/client'
-const prisma = new PrismaClient()
+import { PrismaClient } from '@prisma/client';
+import bcrypt from "bcrypt";
+
+const saltRounds = 10;
+const prisma = new PrismaClient();
+
+// helper for random date between Jan 1 2025 and Sep 1 2025
+function randomDate() {
+  const start = new Date("2025-01-01");
+  const end = new Date("2025-09-01");
+  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+}
+
+// helper for random interview duration in minutes
+function randomDurationMinutes() {
+  const minMinutes = 30;
+  const maxMinutes = 120;
+  return Math.floor(Math.random() * (maxMinutes - minMinutes + 1)) + minMinutes;
+}
 
 async function main() {
-  // Create Preferences
+  const randomScore = () => Math.floor(Math.random() * 101);
+
+  // Create performance breakdown categories
+  const perf1 = await prisma.performanceBreakdown.create({
+    data: { preformanceName: "Communication", preformanceScore: 0 }
+  });
+  const perf2 = await prisma.performanceBreakdown.create({
+    data: { preformanceName: "Technical Knowledge", preformanceScore: 0 }
+  });
+  const perf3 = await prisma.performanceBreakdown.create({
+    data: { preformanceName: "Problem Solving", preformanceScore: 0 }
+  });
+
+  // Helper to create interview analysis and link performance breakdowns
+  async function createInterviewAnalysis(interviewId, videoQuestionId, answer, feedback) {
+    const analysis = await prisma.interviewAnalysis.create({
+      data: {
+        userAnswer: answer,
+        feedback: feedback,
+        scorePerQuestion: randomScore(),
+        interviewId,
+        videoQuestionId
+      }
+    });
+
+    // Create InterviewPerformanceBreakdown directly connected to Interview
+    await prisma.interviewPerformanceBreakdown.createMany({
+      data: [
+        { interviewId, performanceId: perf1.preformanceId },
+        { interviewId, performanceId: perf2.preformanceId },
+        { interviewId, performanceId: perf3.preformanceId },
+      ]
+    });
+  }
+
+  // --- User 1 ---
   const pref = await prisma.settingsPreference.create({
     data: {
       language: "English",
@@ -13,17 +65,16 @@ async function main() {
       pushNotification: true,
       interviewReminder: true,
       productUpdate: true,
-      shareProgress: true,
+      isanonymous: true,
     }
-  })
+  });
 
-  // Create User
   const user = await prisma.registeredUser.create({
     data: {
       firstName: "Tony",
       lastName: "Stark",
       email: "tonyStar@gmail.com",
-      hashedPassword: "hashed_pw123",
+      hashedPassword: await bcrypt.hash("Hashed_pw123@", saltRounds),
       country: "Sri Lanka",
       phoneNumber: "+94770111222",
       address: "Colombo",
@@ -33,22 +84,22 @@ async function main() {
       createdAt: new Date(),
       proImgPath: "/uploads/profile1.png",
       preferenceId: pref.preferenceId,
+      currentProfessionalRole: "Backend Developer Intern",
+      targetProfessionalRole: "Full Stack Developer",
+      linkedInURL: "https://linkedIn/Tony"
     }
-  })
+  });
 
-  //  Create Skills
-  const skill1 = await prisma.skill.create({ data: { skillName: "C#" } })
-  const skill2 = await prisma.skill.create({ data: { skillName: "React" } })
+  const skill1 = await prisma.skill.create({ data: { skillName: "C#" } });
+  const skill2 = await prisma.skill.create({ data: { skillName: "React" } });
 
-  // Link User to Skills
   await prisma.userSkill.createMany({
     data: [
       { userId: user.userId, skillId: skill1.skillId },
       { userId: user.userId, skillId: skill2.skillId }
     ]
-  })
+  });
 
-  // Add Project
   const proj = await prisma.project.create({
     data: {
       projectName: "AI Interview Bot",
@@ -57,17 +108,15 @@ async function main() {
       endDate: new Date("2024-05-01"),
       userId: user.userId
     }
-  })
+  });
 
-  // Link Project to Skills
   await prisma.projectSkill.createMany({
     data: [
       { projectId: proj.projectId, skillId: skill1.skillId },
       { projectId: proj.projectId, skillId: skill2.skillId }
     ]
-  })
+  });
 
-  // Education
   await prisma.education.create({
     data: {
       degree: "BSc in Software Engineering",
@@ -76,9 +125,8 @@ async function main() {
       endDate: new Date("2025-12-31"),
       userId: user.userId
     }
-  })
+  });
 
-  // Experience
   await prisma.experience.create({
     data: {
       jobTitle: "Intern Developer",
@@ -88,53 +136,66 @@ async function main() {
       description: "Worked on backend services",
       userId: user.userId
     }
+  });
+
+  await prisma.achievement.create({
+    data: {
+      achievementTitle: "Iron man of the year 2010-2022",
+      achievementDescription: "I'm Iron Man",
+      userId: user.userId
+    }
   })
 
-  //  CV & Keywords
   const cv = await prisma.cv.create({
     data: {
       cvFilepath: "/uploads/cv1.pdf",
       cvImagePath: "/uploads/cv1.png",
-      userId: user.userId
+      userId: user.userId,
+      modifiedDate: randomDate()
     }
-  })
+  });
   await prisma.keyword.createMany({
     data: [
       { keywordName: "Backend", keywordValue: "Node.js", cvId: cv.cvId },
       { keywordName: "Database", keywordValue: "MySQL", cvId: cv.cvId }
     ]
-  })
+  });
 
-  // Interview Setup
   const jobRole = await prisma.interviewJobRole.create({
     data: {
       jobRoleName: "Software Engineer",
       jobRoleDescription: "General SWE interview"
     }
-  })
+  });
   const question = await prisma.videoQuestion.create({
     data: {
       videoPath: "/videos/se_q1.mp4",
       question: "What is polymorphism?",
       interviewJobRoleId: jobRole.interviewJobRoleId
     }
-  })
-  const interview = await prisma.interview.create({
-    data: {
-      interviewScore: 0.0,
-      userId: user.userId,
-      interviewJobRoleId: jobRole.interviewJobRoleId
-    }
-  })
-  await prisma.interviewAnalysis.create({
-    data: {
-      userAnswer: "It allows objects to take many forms...",
-      feedback: "Good explanation but add an example.",
-      scorePerQuestion: 7.5,
-      interviewId: interview.interviewId,
-      videoQuestionId: question.videoQuestionId
-    }
-  })
+  });
+
+  for (let i = 0; i < 3; i++) {
+    const interview = await prisma.interview.create({
+      data: {
+        interviewScore: randomScore(),
+        interviewDate: randomDate(),
+        interviewDuration: randomDurationMinutes(),
+        isCompleted: i % 2 === 0, 
+        completedPercentage: i % 2 === 0 ? 100 : 50,
+        experienceLevel: ["Junior", "Mid", "Senior"][i % 3],
+        userId: user.userId,
+        interviewJobRoleId: jobRole.interviewJobRoleId
+      }
+    });
+
+    await createInterviewAnalysis(
+      interview.interviewId,
+      question.videoQuestionId,
+      `Answer ${i + 1} by Tony Stark...`,
+      `Feedback for answer ${i + 1}`
+    );
+  }
 
   // --- User 2 ---
   const pref2 = await prisma.settingsPreference.create({
@@ -146,16 +207,16 @@ async function main() {
       pushNotification: true,
       interviewReminder: false,
       productUpdate: true,
-      shareProgress: false,
+      isanonymous: false,
     }
-  })
+  });
 
   const user2 = await prisma.registeredUser.create({
     data: {
       firstName: "Natasha",
       lastName: "Romanoff",
       email: "natasha@gmail.com",
-      hashedPassword: "hashed_pw456",
+      hashedPassword: await bcrypt.hash("Hashed_pw123@", saltRounds),
       country: "USA",
       phoneNumber: "+12025551234",
       address: "New York",
@@ -165,18 +226,21 @@ async function main() {
       createdAt: new Date(),
       proImgPath: "/uploads/profile2.png",
       preferenceId: pref2.preferenceId,
+      currentProfessionalRole: "Security Analyst Intern",
+      targetProfessionalRole: "Cybersecurity Engineer",
+      linkedInURL: "https://linkedIn/Natasha"
     }
-  })
+  });
 
-  const skill2a = await prisma.skill.create({ data: { skillName: "Python" } })
-  const skill2b = await prisma.skill.create({ data: { skillName: "Django" } })
+  const skill2a = await prisma.skill.create({ data: { skillName: "Python" } });
+  const skill2b = await prisma.skill.create({ data: { skillName: "Django" } });
 
   await prisma.userSkill.createMany({
     data: [
       { userId: user2.userId, skillId: skill2a.skillId },
       { userId: user2.userId, skillId: skill2b.skillId }
     ]
-  })
+  });
 
   const proj2 = await prisma.project.create({
     data: {
@@ -186,14 +250,14 @@ async function main() {
       endDate: new Date("2023-08-01"),
       userId: user2.userId
     }
-  })
+  });
 
   await prisma.projectSkill.createMany({
     data: [
       { projectId: proj2.projectId, skillId: skill2a.skillId },
       { projectId: proj2.projectId, skillId: skill2b.skillId }
     ]
-  })
+  });
 
   await prisma.education.create({
     data: {
@@ -203,7 +267,7 @@ async function main() {
       endDate: new Date("2022-06-30"),
       userId: user2.userId
     }
-  })
+  });
 
   await prisma.experience.create({
     data: {
@@ -214,99 +278,140 @@ async function main() {
       description: "Monitored and reported vulnerabilities",
       userId: user2.userId
     }
-  })
+  });
+
+await prisma.achievement.create({
+  data: {
+    achievementTitle: "Avenger",
+    achievementDescription: "IDK why I'm here",
+    userId: user2.userId
+  }
+})
 
   const cv2 = await prisma.cv.create({
     data: {
       cvFilepath: "/uploads/cv2.pdf",
       cvImagePath: "/uploads/cv2.png",
-      userId: user2.userId
+      userId: user2.userId,
+      modifiedDate: randomDate()
     }
-  })
+  });
 
   await prisma.keyword.createMany({
     data: [
       { keywordName: "Security", keywordValue: "Penetration Testing", cvId: cv2.cvId },
       { keywordName: "Programming", keywordValue: "Python", cvId: cv2.cvId }
     ]
-  })
+  });
+
+  for (let i = 0; i < 3; i++) {
+    const interview = await prisma.interview.create({
+      data: {
+        interviewScore: randomScore(),
+        interviewDate: randomDate(),
+        interviewDuration: randomDurationMinutes(),
+        isCompleted: i % 2 === 0,
+        completedPercentage: i % 2 === 0 ? 100 : 50,
+        experienceLevel: ["Junior", "Intermediate", "Senior"][i % 3],
+        userId: user2.userId,
+        interviewJobRoleId: jobRole.interviewJobRoleId
+      }
+    });
+    await createInterviewAnalysis(
+      interview.interviewId,
+      question.videoQuestionId,
+      `Answer ${i + 1} by Natasha...`,
+      `Feedback for answer ${i + 1}`
+    );
+  }
 
   // --- User 3 ---
   const pref3 = await prisma.settingsPreference.create({
     data: {
-      language: "French",
+      language: "English",
       publicProfileVisibility: true,
       soundEffect: true,
       emailNotification: true,
       pushNotification: false,
       interviewReminder: true,
       productUpdate: false,
-      shareProgress: true,
+      isanonymous: true,
     }
-  })
+  });
 
   const user3 = await prisma.registeredUser.create({
     data: {
       firstName: "Bruce",
       lastName: "Banner",
-      email: "bruce.banner@gmail.com",
-      hashedPassword: "hashed_pw789",
-      country: "Canada",
-      phoneNumber: "+14165551234",
-      address: "Toronto",
-      dob: new Date("1995-02-18"),
+      email: "bruce@gmail.com",
+      hashedPassword: await bcrypt.hash("Hashed_pw123@", saltRounds),
+      country: "Sri Lanka",
+      phoneNumber: "+94778889999",
+      address: "Kandy",
+      dob: new Date("1995-12-18"),
       gender: "Male",
-      bio: "AI and Machine Learning researcher",
+      bio: "AI/ML Researcher",
       createdAt: new Date(),
       proImgPath: "/uploads/profile3.png",
       preferenceId: pref3.preferenceId,
+      currentProfessionalRole: "ML Engineer",
+      targetProfessionalRole: "AI Scientist",
+      linkedInURL: "https://linkedIn/Bruce"
     }
-  })
+  });
 
-  const skill3a = await prisma.skill.create({ data: { skillName: "Machine Learning" } })
-  const skill3b = await prisma.skill.create({ data: { skillName: "TensorFlow" } })
+  const skill3a = await prisma.skill.create({ data: { skillName: "TensorFlow" } });
+  const skill3b = await prisma.skill.create({ data: { skillName: "PyTorch" } });
 
   await prisma.userSkill.createMany({
     data: [
       { userId: user3.userId, skillId: skill3a.skillId },
       { userId: user3.userId, skillId: skill3b.skillId }
     ]
-  })
+  });
 
   const proj3 = await prisma.project.create({
     data: {
-      projectName: "Smart Health Predictor",
-      projectDescription: "Predict health risks using ML",
-      startDate: new Date("2023-05-01"),
-      endDate: new Date("2024-01-01"),
+      projectName: "Medical Imaging AI",
+      projectDescription: "Deep learning model for X-ray classification",
+      startDate: new Date("2022-01-01"),
+      endDate: new Date("2022-09-01"),
       userId: user3.userId
     }
-  })
+  });
 
   await prisma.projectSkill.createMany({
     data: [
       { projectId: proj3.projectId, skillId: skill3a.skillId },
       { projectId: proj3.projectId, skillId: skill3b.skillId }
     ]
-  })
+  });
 
   await prisma.education.create({
     data: {
       degree: "MSc in AI",
-      institution: "University of Toronto",
-      startDate: new Date("2020-09-01"),
-      endDate: new Date("2022-06-30"),
+      institution: "Stanford University",
+      startDate: new Date("2017-09-01"),
+      endDate: new Date("2019-06-30"),
       userId: user3.userId
     }
-  })
+  });
 
   await prisma.experience.create({
     data: {
-      jobTitle: "ML Research Intern",
-      company: "AI Labs",
-      startDate: new Date("2022-07-01"),
-      endDate: new Date("2023-02-28"),
-      description: "Developed ML models for healthcare",
+      jobTitle: "Machine Learning Engineer",
+      company: "MediTech AI",
+      startDate: new Date("2019-07-01"),
+      endDate: new Date("2022-12-31"),
+      description: "Developed AI solutions for healthcare",
+      userId: user3.userId
+    }
+  });
+
+  await prisma.achievement.create({
+    data: {
+      achievementTitle: "Hulk",
+      achievementDescription: "Hulk",
       userId: user3.userId
     }
   })
@@ -315,26 +420,48 @@ async function main() {
     data: {
       cvFilepath: "/uploads/cv3.pdf",
       cvImagePath: "/uploads/cv3.png",
-      userId: user3.userId
+      userId: user3.userId,
+      modifiedDate: randomDate()
     }
-  })
+  });
 
   await prisma.keyword.createMany({
     data: [
       { keywordName: "AI", keywordValue: "Deep Learning", cvId: cv3.cvId },
-      { keywordName: "Framework", keywordValue: "TensorFlow", cvId: cv3.cvId }
+      { keywordName: "Medical", keywordValue: "Radiology", cvId: cv3.cvId }
     ]
-  })
+  });
 
-  console.log("Seeding done with 3 users!")
+  for (let i = 0; i < 3; i++) {
+    const interview = await prisma.interview.create({
+      data: {
+        interviewScore: randomScore(),
+        interviewDate: randomDate(),
+        interviewDuration: randomDurationMinutes(),
+        isCompleted: i % 2 === 0,
+        completedPercentage: i % 2 === 0 ? 100 : 50,
+        experienceLevel: ["Junior", "Intermediate", "Senior"][i % 3],
+        userId: user3.userId,
+        interviewJobRoleId: jobRole.interviewJobRoleId
+      }
+    });
+    await createInterviewAnalysis(
+      interview.interviewId,
+      question.videoQuestionId,
+      `Answer ${i + 1} by Bruce...`,
+      `Feedback for answer ${i + 1}`
+    );
+  }
+
+  console.log("Seeding done with 3 users, interviews, and performance breakdowns!");
 }
 
 main()
   .then(async () => {
-    await prisma.$disconnect()
+    await prisma.$disconnect();
   })
   .catch(async (e) => {
-    console.error(e)
-    await prisma.$disconnect()
-    process.exit(1)
-})
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });

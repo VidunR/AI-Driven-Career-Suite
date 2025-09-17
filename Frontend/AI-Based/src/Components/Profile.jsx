@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -8,40 +9,102 @@ import { Avatar, AvatarFallback } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Progress } from './ui/progress';
-import { User, Mail, Phone, MapPin, Calendar, Edit, Save, Award, Target } from 'lucide-react';
 import { toast } from 'sonner';
+import { MapPin, Edit, Save, Target, Award } from 'lucide-react';
 
-export function Profile({ user, accessToken, onNavigate }) {
+export function Profile({ onNavigate }) {
   const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
+
   const [profileData, setProfileData] = useState({
-    fullName: user.user_metadata?.full_name || '',
-    email: user.email || '',
-    phone: '',
-    location: '',
+    fullName: '',
+    email: '',
+    phoneNumber: '',
+    country: '',
+    address: '',
     bio: '',
-    currentRole: '',
-    targetRole: '',
-    experience: '',
-    skills: ['JavaScript', 'React', 'Node.js', 'Python'],
+    currentProfessionalRole: '',
+    targetProfessionalRole: '',
+    linkedInURL: '',
+    skills: [],
     goals: ['Improve technical interviews', 'Practice system design', 'Enhance communication']
   });
 
-  const stats = {
-    interviewsCompleted: 8,
-    averageScore: 78,
-    improvementRate: 15,
-    rank: 15,
+  const [stats, setStats] = useState({
+    interviewCount: 0,
+    averageScore: 0,
+    improvement: 0,
+    rank: '-',
     skillProgress: {
-      communication: 82,
-      technical: 75,
-      problemSolving: 80,
-      leadership: 70
+      communication: 0,
+      technical: 0,
+      problemSolving: 0,
+      leadership: 0
     }
-  };
+  });
+
+  const token = localStorage.getItem("jwtToken");
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!token) {
+        toast.error("User not authenticated");
+        return;
+      }
+
+      try {
+        const headers = { Authorization: `Bearer ${token}` };
+
+        // Overview Stats
+        const overviewRes = await axios.get("http://localhost:5000/profile/overview", { headers });
+        const overviewData = overviewRes.data;
+        setStats(prev => ({
+          ...prev,
+          interviewCount: overviewData.interviewCount,
+          averageScore: overviewData.averageScore,
+          rank: overviewData.rank,
+          improvement: overviewData.improvement,
+          skillProgress: overviewData.skillProgress || prev.skillProgress
+        }));
+
+        // Personal Details
+        const personalRes = await axios.get("http://localhost:5000/profile/personal", { headers });
+        const personalData = personalRes.data;
+        setProfileData(prev => ({
+          ...prev,
+          fullName: `${personalData.firstName} ${personalData.lastName}`,
+          email: personalData.email || '',
+          phoneNumber: personalData.phoneNumber || '',
+          country: personalData.country || '',
+          address: personalData.address || '',
+          bio: personalData.bio || '',
+          currentProfessionalRole: personalData.currentProfessionalRole || '',
+          targetProfessionalRole: personalData.targetProfessionalRole || '',
+          linkedInURL: personalData.linkedInURL || ''
+        }));
+
+        // Skills & Goals
+        const skillsRes = await axios.get("http://localhost:5000/profile/skills", { headers });
+        const skillsData = skillsRes.data;
+        setProfileData(prev => ({
+          ...prev,
+          skills: Array.isArray(skillsData) ? skillsData : skillsData.skills || [],
+          goals: skillsData.goals || prev.goals
+        }));
+
+      } catch (err) {
+        console.error("Error fetching profile:", err);
+        toast.error("Failed to load profile");
+      }
+    };
+
+    fetchProfile();
+  }, [token]);
 
   const handleSave = () => {
     setIsEditing(false);
     toast.success('Profile updated successfully');
+    // Optional: Send updated data to backend via axios PUT request
   };
 
   const addSkill = (skill) => {
@@ -73,7 +136,7 @@ export function Profile({ user, accessToken, onNavigate }) {
         </Button>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="details">Personal Details</TabsTrigger>
@@ -81,72 +144,66 @@ export function Profile({ user, accessToken, onNavigate }) {
           <TabsTrigger value="statistics">Statistics</TabsTrigger>
         </TabsList>
 
+        {/* Overview */}
         <TabsContent value="overview" className="space-y-6">
-          {/* Profile Header */}
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-start gap-6">
-                <Avatar className="w-24 h-24">
-                  <AvatarFallback className="text-xl">
-                    {profileData.fullName.split(' ').map(n => n[0]).join('') || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 space-y-4">
-                  <div>
-                    <h2 className="text-xl font-semibold">{profileData.fullName || 'User'}</h2>
-                    <p className="text-muted-foreground">{profileData.currentRole || 'Professional'}</p>
-                    {profileData.location && (
-                      <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                        <MapPin className="h-3 w-3" />
-                        {profileData.location}
-                      </p>
-                    )}
-                  </div>
-                  {profileData.bio && (
-                    <p className="text-sm">{profileData.bio}</p>
+            <CardContent className="p-6 flex items-start gap-6">
+              <Avatar className="w-24 h-24">
+                <AvatarFallback className="text-xl">
+                  {profileData.fullName.split(' ').map(n => n[0]).join('') || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 space-y-2">
+                <h2 className="text-xl font-semibold">{profileData.fullName || 'User'}</h2>
+                <p className="text-muted-foreground">{profileData.currentProfessionalRole || 'Professional'}</p>
+                {profileData.address && (
+                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    {profileData.address}
+                  </p>
+                )}
+                {profileData.bio && <p className="text-sm">{profileData.bio}</p>}
+                <div className="flex flex-wrap gap-2">
+                  {profileData.skills.slice(0, 5).map(skill => (
+                    <Badge key={skill} variant="secondary">{skill}</Badge>
+                  ))}
+                  {profileData.skills.length > 5 && (
+                    <Badge variant="outline">+{profileData.skills.length - 5} more</Badge>
                   )}
-                  <div className="flex flex-wrap gap-2">
-                    {profileData.skills.slice(0, 5).map((skill) => (
-                      <Badge key={skill} variant="secondary">{skill}</Badge>
-                    ))}
-                    {profileData.skills.length > 5 && (
-                      <Badge variant="outline">+{profileData.skills.length - 5} more</Badge>
-                    )}
-                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
-
-          {/* Quick Stats */}
+          {/* Overview */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-primary">{stats.interviewsCompleted}</div>
+                <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-primary">{stats.interviewCount}</div>
                 <p className="text-sm text-muted-foreground">Interviews</p>
-              </CardContent>
+                </CardContent>
             </Card>
             <Card>
-              <CardContent className="p-4 text-center">
+                <CardContent className="p-4 text-center">
                 <div className="text-2xl font-bold text-green-600">{stats.averageScore}%</div>
                 <p className="text-sm text-muted-foreground">Avg Score</p>
-              </CardContent>
+                </CardContent>
             </Card>
             <Card>
-              <CardContent className="p-4 text-center">
+                <CardContent className="p-4 text-center">
                 <div className="text-2xl font-bold text-blue-600">#{stats.rank}</div>
                 <p className="text-sm text-muted-foreground">Rank</p>
-              </CardContent>
+                </CardContent>
             </Card>
             <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-orange-600">+{stats.improvementRate}%</div>
+                <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-orange-600">{stats.improvement}%</div>
                 <p className="text-sm text-muted-foreground">Improvement</p>
-              </CardContent>
+                </CardContent>
             </Card>
-          </div>
+        </div>
         </TabsContent>
 
+        {/* Personal Details */}
         <TabsContent value="details" className="space-y-6">
           <Card>
             <CardHeader>
@@ -155,68 +212,71 @@ export function Profile({ user, accessToken, onNavigate }) {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="fullName" className="mb-2 block">Full Name</Label>
+                  <Label>Full Name</Label>
                   <Input
-                    id="fullName"
                     value={profileData.fullName}
                     onChange={(e) => setProfileData(prev => ({ ...prev, fullName: e.target.value }))}
                     disabled={!isEditing}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="email" className="mb-2 block">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={profileData.email}
-                    disabled
-                  />
+                  <Label>Email</Label>
+                  <Input value={profileData.email} disabled />
                 </div>
                 <div>
-                  <Label htmlFor="phone" className="mb-2 block">Phone</Label>
+                  <Label>Phone</Label>
                   <Input
-                    id="phone"
-                    value={profileData.phone}
-                    onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
+                    value={profileData.phoneNumber}
+                    onChange={(e) => setProfileData(prev => ({ ...prev, phoneNumber: e.target.value }))}
                     disabled={!isEditing}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="location" className="mb-2 block">Location</Label>
+                  <Label>Country</Label>
                   <Input
-                    id="location"
-                    value={profileData.location}
-                    onChange={(e) => setProfileData(prev => ({ ...prev, location: e.target.value }))}
-                    disabled={!isEditing}
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="bio" className="mb-2 block">Bio</Label>
-                <Textarea
-                  id="bio"
-                  value={profileData.bio}
-                  onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
-                  disabled={!isEditing}
-                  rows={3}
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="currentRole" className="mb-2 block">Current Role</Label>
-                  <Input
-                    id="currentRole"
-                    value={profileData.currentRole}
-                    onChange={(e) => setProfileData(prev => ({ ...prev, currentRole: e.target.value }))}
+                    value={profileData.country}
+                    onChange={(e) => setProfileData(prev => ({ ...prev, country: e.target.value }))}
                     disabled={!isEditing}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="targetRole" className="mb-2 block">Target Role</Label>
+                  <Label>Address</Label>
                   <Input
-                    id="targetRole"
-                    value={profileData.targetRole}
-                    onChange={(e) => setProfileData(prev => ({ ...prev, targetRole: e.target.value }))}
+                    value={profileData.address}
+                    onChange={(e) => setProfileData(prev => ({ ...prev, address: e.target.value }))}
+                    disabled={!isEditing}
+                  />
+                </div>
+                <div>
+                  <Label>Bio</Label>
+                  <Textarea
+                    value={profileData.bio}
+                    onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
+                    disabled={!isEditing}
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <Label>Current Role</Label>
+                  <Input
+                    value={profileData.currentProfessionalRole}
+                    onChange={(e) => setProfileData(prev => ({ ...prev, currentProfessionalRole: e.target.value }))}
+                    disabled={!isEditing}
+                  />
+                </div>
+                <div>
+                  <Label>Target Role</Label>
+                  <Input
+                    value={profileData.targetProfessionalRole}
+                    onChange={(e) => setProfileData(prev => ({ ...prev, targetProfessionalRole: e.target.value }))}
+                    disabled={!isEditing}
+                  />
+                </div>
+                <div>
+                  <Label>LinkedIn URL</Label>
+                  <Input
+                    value={profileData.linkedInURL}
+                    onChange={(e) => setProfileData(prev => ({ ...prev, linkedInURL: e.target.value }))}
                     disabled={!isEditing}
                   />
                 </div>
@@ -225,33 +285,32 @@ export function Profile({ user, accessToken, onNavigate }) {
           </Card>
         </TabsContent>
 
+        {/* Skills & Goals */}
         <TabsContent value="skills" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Skills</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {profileData.skills.map((skill) => (
-                  <Badge key={skill} variant="secondary" className="flex items-center gap-1">
-                    {skill}
-                    {isEditing && (
-                      <button
-                        onClick={() => removeSkill(skill)}
-                        className="ml-1 hover:text-red-500"
-                      >
-                        ×
-                      </button>
-                    )}
-                  </Badge>
-                ))}
-              </div>
+            <CardContent className="flex flex-wrap gap-2">
+              {profileData.skills.map(skill => (
+                <Badge key={skill} variant="secondary" className="flex items-center gap-1">
+                  {skill}
+                  {isEditing && (
+                    <button
+                      onClick={() => removeSkill(skill)}
+                      className="ml-1 hover:text-red-500"
+                    >
+                      ×
+                    </button>
+                  )}
+                </Badge>
+              ))}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Career Goals</CardTitle>
+              <CardTitle>Goals</CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2">
@@ -266,6 +325,7 @@ export function Profile({ user, accessToken, onNavigate }) {
           </Card>
         </TabsContent>
 
+        {/* Statistics */}
         <TabsContent value="statistics" className="space-y-6">
           <Card>
             <CardHeader>
@@ -275,36 +335,12 @@ export function Profile({ user, accessToken, onNavigate }) {
               {Object.entries(stats.skillProgress).map(([skill, progress]) => (
                 <div key={skill} className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="capitalize">{skill.replace(/([A-Z])/g, ' $1').trim()}</span>
+                    <span className="capitalize">{skill}</span>
                     <span className="font-medium">{progress}%</span>
                   </div>
                   <Progress value={progress} className="h-2" />
                 </div>
               ))}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Achievements</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                  <Award className="h-8 w-8 text-yellow-500" />
-                  <div>
-                    <p className="font-medium">First Interview</p>
-                    <p className="text-sm text-muted-foreground">Completed your first mock interview</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                  <Award className="h-8 w-8 text-blue-500" />
-                  <div>
-                    <p className="font-medium">Consistent Learner</p>
-                    <p className="text-sm text-muted-foreground">Completed 5 interviews this month</p>
-                  </div>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>

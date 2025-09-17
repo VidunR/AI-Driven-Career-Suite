@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import {
   Card,
   CardContent,
@@ -14,31 +15,23 @@ import {
   FileText,
   Target,
   Award,
-  Calendar,
   Clock,
   Users,
-  BookOpen,
-  Star,
-  ChevronRight,
-  Play,
   MessageSquare,
   Search,
   ArrowRight,
   CheckCircle,
 } from "lucide-react";
-import {
-  getDashboardStats,
-  getCVs,
-  getJobRecommendations,
-} from "../utils/supabase/client";
 import { Link } from "react-router-dom";
 
-export function Dashboard({ user, accessToken, onNavigate }) {
+export function Dashboard({ onNavigate }) {
   const [stats, setStats] = useState({
-    cvCount: 2,
-    jobApplications: 8,
-    interviewsPracticed: 15,
-    profileStrength: 75,
+    firstName: "",
+    lastName: "",
+    cvCount: 0,
+    interviewCount: 0,
+    highestScore: 0,
+    leaderboardRank: "",
   });
 
   const [recentActivity, setRecentActivity] = useState([
@@ -92,15 +85,28 @@ export function Dashboard({ user, accessToken, onNavigate }) {
     },
   ]);
 
-  const getUserName = () => {
-    if (user?.user_metadata?.firstName) {
-      return user.user_metadata.firstName;
-    }
-    if (user?.email) {
-      return user.email.split("@")[0];
-    }
-    return "there";
-  };
+  // Fetch dashboard stats from backend
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const token = localStorage.getItem("jwtToken"); // ✅ always get it from localStorage
+        if (!token) {
+          console.error("No token found in localStorage");
+          return;
+        }
+
+        const response = await axios.get("http://localhost:5000/dashboard", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        console.log("Dashboard response:", response.data);
+        setStats(response.data);
+      } catch (err) {
+        console.error("Error fetching dashboard stats:", err);
+      }
+    };
+
+    fetchStats();
+  }, []); // only runs once on mount
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -114,14 +120,14 @@ export function Dashboard({ user, accessToken, onNavigate }) {
       {/* Header */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold">
-          {getGreeting()}, {getUserName()}! 👋
+          {getGreeting()}, {stats.firstName} {stats.lastName}!
         </h1>
         <p className="text-muted-foreground text-lg">
           Here's your career progress overview. Ready to take the next step?
         </p>
       </div>
 
-      {/* Stats Overview  */}
+      {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -130,20 +136,6 @@ export function Dashboard({ user, accessToken, onNavigate }) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.cvCount}</div>
-            <p className="text-xs text-muted-foreground">+1 from last week</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Job Applications
-            </CardTitle>
-            <Search className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.jobApplications}</div>
-            <p className="text-xs text-muted-foreground">+3 from last week</p>
           </CardContent>
         </Card>
 
@@ -155,28 +147,34 @@ export function Dashboard({ user, accessToken, onNavigate }) {
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {stats.interviewsPracticed}
-            </div>
-            <p className="text-xs text-muted-foreground">+5 from last week</p>
+            <div className="text-2xl font-bold">{stats.interviewCount}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Highest Score</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.highestScore}</div>
           </CardContent>
         </Card>
 
         <Card className="border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Profile Strength
+              Leaderboard Rank
             </CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.profileStrength}%</div>
-            <Progress value={stats.profileStrength} className="mt-2" />
+            <div className="text-2xl font-bold">{stats.leaderboardRank}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions (unchanged) */}
       <div className="space-y-4">
         <h2 className="text-2xl font-bold">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -211,9 +209,8 @@ export function Dashboard({ user, accessToken, onNavigate }) {
         </div>
       </div>
 
-      {/* Recent Activity & Profile Completeness */}
+      {/* Recent Activity & Profile Completeness (unchanged) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Activity */}
         <Card className="border-border">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -251,7 +248,6 @@ export function Dashboard({ user, accessToken, onNavigate }) {
           </CardContent>
         </Card>
 
-        {/* Profile Completeness */}
         <Card className="border-border">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -290,21 +286,22 @@ export function Dashboard({ user, accessToken, onNavigate }) {
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium">Progress</span>
                 <span className="text-sm text-muted-foreground">
-                  {stats.profileStrength}%
+                  {stats.cvCount > 0 && stats.interviewCount > 0 ? "70%" : "40%"}
                 </span>
               </div>
-              <Progress value={stats.profileStrength} className="mb-4" />
+              <Progress
+                value={stats.cvCount > 0 && stats.interviewCount > 0 ? 70 : 40}
+                className="mb-4"
+              />
               <Link to="/profile">
-                <Button className="w-full">
-                  Complete Profile
-                </Button>
+                <Button className="w-full">Complete Profile</Button>
               </Link>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Achievement Banner */}
+      {/* Achievement Banner (unchanged) */}
       <Card className="border-border bg-gradient-to-r from-primary/10 to-accent/10">
         <CardContent className="p-6">
           <div className="flex items-center gap-4">
@@ -314,8 +311,7 @@ export function Dashboard({ user, accessToken, onNavigate }) {
             <div className="flex-1">
               <h3 className="text-lg font-bold">🎉 Achievement Unlocked!</h3>
               <p className="text-muted-foreground">
-                You've completed 15 mock interviews. You're in the top 20% of
-                users!
+                You’ve completed {stats.interviewCount} mock interviews.
               </p>
             </div>
             <Link to="/leaderboard">

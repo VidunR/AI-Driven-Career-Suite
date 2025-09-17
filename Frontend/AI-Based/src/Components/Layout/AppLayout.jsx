@@ -1,8 +1,8 @@
-import React, { useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "../ui/button";
-import { Avatar, AvatarFallback } from "../ui/avatar";
-import { useNavigate } from 'react-router-dom';
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import axios from "axios";
 import {
   Award,
   Home,
@@ -19,13 +19,45 @@ import {
   X,
 } from "lucide-react";
 
-export function AppLayout({ user, onLogout }) {
+export function AppLayout({ onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const location = useLocation();
   const navigate = useNavigate();
-  
+  const currentPage = location.pathname.substring(1);
 
-  const currentPage = location.pathname.substring(1); // remove leading "/"
+  // Fetch profile from backend using JWT from localStorage
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setLoading(true);
+      const token = localStorage.getItem("jwtToken");
+      if (!token) {
+        navigate("/login", { replace: true });
+        return;
+      }
+
+      try {
+        const response = await axios.get("http://localhost:5000/applayout", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setProfile(response.data);
+      } catch (err) {
+        console.error("Failed to fetch profile:", err);
+        setError("Failed to load profile.");
+        localStorage.removeItem("jwtToken");
+        navigate("/login", { replace: true });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [navigate]);
 
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: Home },
@@ -50,10 +82,10 @@ export function AppLayout({ user, onLogout }) {
         <div className="flex items-center gap-4">
           <div className="w-8 h-8 bg-sidebar-primary rounded-lg flex items-center justify-center">
             <img
-                src="/favicon_1.png"
-                alt="SkillSprint Logo"
-                className="w-8 h-8 object-cover rounded-md"
-              />
+              src="/favicon_1.png"
+              alt="SkillSprint Logo"
+              className="w-8 h-8 object-cover rounded-md"
+            />
           </div>
           <span className="text-lg font-semibold text-sidebar-foreground">
             SkillSprint
@@ -118,8 +150,9 @@ export function AppLayout({ user, onLogout }) {
           variant="ghost"
           className="w-full justify-start space-x-3 h-11 text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive"
           onClick={() => {
-            onLogout();
-            navigate("/", { replace: true });
+            localStorage.removeItem("jwtToken");
+            onLogout?.();
+            navigate("/login", { replace: true });
           }}
         >
           <LogOut className="w-5 h-5" />
@@ -168,21 +201,27 @@ export function AppLayout({ user, onLogout }) {
           </div>
 
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-3">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium">{user?.name}</p>
-                <p className="text-xs text-muted-foreground">{user?.email}</p>
+            {loading ? (
+              <p className="text-sm text-muted-foreground">Loading profile...</p>
+            ) : error ? (
+              <p className="text-sm text-destructive">{error}</p>
+            ) : (
+              <div className="flex items-center space-x-3">
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-medium">{profile.firstName} {profile.lastName}</p>
+                  <p className="text-xs text-muted-foreground">{profile.email}</p>
+                </div>
+                <Avatar>
+                  {profile.proImgPath ? (
+                    <AvatarImage src={`http://localhost:5000${profile.proImgPath}`} />
+                  ) : (
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      {profile.firstName[0]}{profile.lastName[0]}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
               </div>
-              <Avatar>
-                <AvatarFallback className="bg-primary text-primary-foreground">
-                  {user?.name
-                    ?.split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            </div>
+            )}
           </div>
         </header>
 
