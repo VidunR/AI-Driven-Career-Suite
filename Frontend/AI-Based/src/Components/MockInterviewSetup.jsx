@@ -39,7 +39,7 @@ export function MockInterviewSetup({ user, accessToken, onNavigate }) {
   ];
 
   const difficultyLevels = [
-    { value: 'entry', label: 'Entry Level', description: 'For new graduates and junior positions' },
+    { value: 'entry', label: 'Junior Level', description: 'For new graduates and junior positions' },
     { value: 'mid', label: 'Mid Level', description: 'For experienced professionals' },
     { value: 'senior', label: 'Senior Level', description: 'For senior and leadership positions' }
   ];
@@ -169,34 +169,7 @@ export function MockInterviewSetup({ user, accessToken, onNavigate }) {
           <CardTitle>Interview Configuration</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Interview Type */}
-          <div>
-            <Label className="text-base font-medium mb-3 block">Interview Type</Label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {interviewTypes.map((type) => (
-                <Card
-                  key={type.value}
-                  className={`cursor-pointer transition-colors ${
-                    config.interviewType === type.value 
-                      ? 'ring-2 ring-primary bg-primary/5' 
-                      : 'hover:bg-accent/50'
-                  }`}
-                  onClick={() => setConfig(prev => ({ ...prev, interviewType: type.value }))}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      {getTypeIcon(type.value)}
-                      <div>
-                        <h4 className="font-medium">{type.label}</h4>
-                        <p className="text-sm text-muted-foreground">{type.description}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-
+          
           {/* Difficulty Level */}
           <div>
             <Label className="text-base font-medium mb-3 block">Difficulty Level</Label>
@@ -314,108 +287,8 @@ export function MockInterviewSetup({ user, accessToken, onNavigate }) {
           )}
         </CardContent>
       </Card>
-
-      {/* Advanced Options */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Advanced Options</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Technical Options */}
-          {(config.interviewType === 'technical' || config.interviewType === 'mixed') && (
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="codeChallenge"
-                  checked={config.includeCodeChallenge}
-                  onCheckedChange={(checked) => 
-                    setConfig(prev => ({ ...prev, includeCodeChallenge: checked }))
-                  }
-                />
-                <label htmlFor="codeChallenge" className="text-sm">
-                  Include coding challenges
-                </label>
-              </div>
-              
-              {config.difficulty === 'senior' && (
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="systemDesign"
-                    checked={config.includeSystemDesign}
-                    onCheckedChange={(checked) => 
-                      setConfig(prev => ({ ...prev, includeSystemDesign: checked }))
-                    }
-                  />
-                  <label htmlFor="systemDesign" className="text-sm">
-                    Include system design questions
-                  </label>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Language Selection */}
-          <div>
-            <Label htmlFor="language" className="mb-2 block">Interview Language</Label>
-            <Select 
-              value={config.language} 
-              onValueChange={(value) => setConfig(prev => ({ ...prev, language: value }))}
-            >
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="english">English</SelectItem>
-                <SelectItem value="spanish">Spanish</SelectItem>
-                <SelectItem value="french">French</SelectItem>
-                <SelectItem value="german">German</SelectItem>
-                <SelectItem value="mandarin">Mandarin</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Custom Questions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Custom Questions (Optional)</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Add specific questions you want to be asked during the interview
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Textarea
-              placeholder="Enter a custom question..."
-              value={newCustomQuestion}
-              onChange={(e) => setNewCustomQuestion(e.target.value)}
-              rows={2}
-            />
-            <Button onClick={addCustomQuestion} size="sm" className="self-start mt-1">
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {config.customQuestions.length > 0 && (
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Custom Questions</Label>
-              {config.customQuestions.map((question, index) => (
-                <div key={index} className="flex items-start gap-2 p-3 bg-muted rounded-lg">
-                  <span className="text-sm flex-1">{question}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeCustomQuestion(question)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+   
+      
 
       {/* Interview Summary */}
       <Card>

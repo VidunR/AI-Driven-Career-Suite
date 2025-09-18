@@ -12,7 +12,7 @@ import {
 } from "./ui/select";
 import { Search, Eye, Trash2, Play } from "lucide-react";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 export function InterviewHistory({ user, onNavigate }) {
@@ -30,6 +30,8 @@ export function InterviewHistory({ user, onNavigate }) {
     "Project Manager",
     "Digital Marketer",
   ];
+
+  const navigate = useNavigate();
 
   // Fetch interview history from backend
   useEffect(() => {
@@ -206,7 +208,7 @@ export function InterviewHistory({ user, onNavigate }) {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => onNavigate("interview-results")}
+                    onClick={() => navigate('/interview-results')}
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     View Results

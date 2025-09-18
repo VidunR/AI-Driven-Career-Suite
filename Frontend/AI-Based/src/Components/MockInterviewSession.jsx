@@ -302,13 +302,7 @@ export function MockInterviewSession({ user, accessToken, onNavigate }) {
 
         {/* Controls */}
         <div className="grid grid-cols-2 gap-2">
-          <Button
-            variant="outline"
-            onClick={toggleMute}
-            className={isMuted ? 'bg-red-100 text-red-800' : ''}
-          >
-            {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-          </Button>
+          
           <Button
             variant="outline"
             onClick={toggleVideo}
@@ -323,9 +317,7 @@ export function MockInterviewSession({ user, accessToken, onNavigate }) {
           >
             {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
           </Button>
-          <Button variant="outline" onClick={togglePause}>
-            {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
-          </Button>
+          
         </div>
 
         {/* Timer and Progress */}
@@ -375,9 +367,7 @@ export function MockInterviewSession({ user, accessToken, onNavigate }) {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowHints(!showHints)}>
-                💡 Hints
-              </Button>
+              
               <Button variant="outline" size="sm" onClick={endInterview}>
                 End Interview
               </Button>
@@ -480,21 +470,21 @@ export function MockInterviewSession({ user, accessToken, onNavigate }) {
                     </span>
                   )}
                 </div>
-                <div className="flex gap-2">
-                  {currentQuestionIndex < questions.length - 1 ? (
-                    <Button onClick={nextQuestion}>
-                      Next Question
-                      <SkipForward className="h-4 w-4 ml-2" />
-                    </Button>
-                  ) : (
-                    <Button onClick={endInterview} className="bg-green-600 hover:bg-green-700">
-                      Finish Interview
-                    </Button>
-                  )}
-                </div>
               </div>
             </CardContent>
           </Card>
+          <div className="flex gap-2">
+            {currentQuestionIndex < questions.length - 1 ? (
+              <Button onClick={nextQuestion}>
+                Next Question
+                <SkipForward className="h-4 w-4 ml-2" />
+              </Button>
+            ) : (
+              <Button onClick={endInterview} className="bg-green-600 hover:bg-green-700">
+                Finish Interview
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>
