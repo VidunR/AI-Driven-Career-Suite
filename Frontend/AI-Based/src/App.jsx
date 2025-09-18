@@ -20,6 +20,7 @@ import { Dashboard } from "./Components/Dashboard";
 import { CVManager } from "./Components/CVManager";
 import { CVBuilder } from "./Components/CVBuilder";
 import JobSearch from "./Components/JobSearch";
+import CVPicker from "./Components/CVPicker"; // ← ADDED
 import { MockInterviewSetup } from "./Components/MockInterviewSetup";
 import { MockInterviewSession } from "./Components/MockInterviewSession";
 import { InterviewResults } from "./Components/InterviewResults";
@@ -55,6 +56,7 @@ export default function App() {
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="cv-manager" element={<CVManager />} />
                 <Route path="cv-builder" element={<CVBuilder />} />
+                <Route path="job-search/select-cv" element={<CVPicker />} /> {/* ← ADDED */}
                 <Route path="job-search" element={<JobSearch />} />
                 <Route path="mock-interview-setup" element={<MockInterviewSetup />} />
                 <Route path="mock-interview-session" element={<MockInterviewSession />} />

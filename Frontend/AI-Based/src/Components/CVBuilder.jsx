@@ -872,7 +872,7 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="location">Location</Label>
+                    <Label htmlFor="location">Address</Label>
                     <Input
                       id="location"
                       value={cvData.personalInfo.location}
