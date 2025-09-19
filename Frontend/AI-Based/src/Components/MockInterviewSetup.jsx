@@ -193,28 +193,7 @@ export function MockInterviewSetup({ user, accessToken, onNavigate }) {
             </div>
           </div>
 
-          {/* Duration */}
-          <div>
-            <Label className="text-base font-medium mb-3 block">Interview Duration</Label>
-            <div className="flex items-center gap-4">
-              <Clock className="h-5 w-5 text-muted-foreground" />
-              <Select 
-                value={config.duration.toString()} 
-                onValueChange={(value) => setConfig(prev => ({ ...prev, duration: parseInt(value) }))}
-              >
-                <SelectTrigger className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {durations.map((duration) => (
-                    <SelectItem key={duration} value={duration.toString()}>
-                      {duration} minutes
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          
         </CardContent>
       </Card>
 
