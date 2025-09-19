@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { useNavigate } from 'react-router-dom';
-import { Search, Calendar, FileText, Eye, Trash2 } from 'lucide-react';
+import { Search, Calendar, FileText, Eye, Trash2, Upload } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
 
@@ -13,6 +13,9 @@ export function CVManager({ user, onNavigate }) {
   const [cvs, setCvs] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+
+  // 🔹 hidden file input ref for Upload CV
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const fetchCVs = async () => {
@@ -51,6 +54,34 @@ export function CVManager({ user, onNavigate }) {
     toast.success("Default CV updated.");
   };
 
+  // 🔹 Upload button -> open file dialog
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  // 🔹 Validate file type: only .pdf, .docx, .doc
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const name = file.name.toLowerCase();
+    const isPDF = name.endsWith('.pdf');
+    const isDOCX = name.endsWith('.docx');
+    const isDOC = name.endsWith('.doc');
+
+    // Double-check by extension because MIME can be flaky across browsers
+    if (!(isPDF || isDOCX || isDOC)) {
+      toast.error("Only .pdf, .docx, and .doc files are allowed.");
+      e.target.value = ''; // reset input
+      return;
+    }
+
+    // No backend yet—just confirm it's ready
+    toast.success(`Ready to upload: ${file.name}`);
+    // Later: POST with FormData to your backend here.
+    e.target.value = ''; // optional: reset to allow re-selecting same file
+  };
+
   const filteredCVs = cvs.filter(cv =>
     cv.cvName.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -76,9 +107,31 @@ export function CVManager({ user, onNavigate }) {
             Manage your CVs and track them easily
           </p>
         </div>
-        <Button className="flex items-center gap-2" onClick={() => navigate('/cv-builder')}>
-          Create New CV
-        </Button>
+
+        {/* Actions: Create + Upload */}
+        <div className="flex items-center gap-2">
+          <Button className="flex items-center gap-2" onClick={() => navigate('/cv-builder')}>
+            Create New CV
+          </Button>
+
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={handleUploadClick}
+          >
+            <Upload className="w-4 h-4" />
+            Upload CV
+          </Button>
+
+          {/* Hidden input with strict constraints */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+        </div>
       </div>
 
       {/* Search */}
