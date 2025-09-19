@@ -1,196 +1,175 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { Textarea } from './ui/textarea';
 import { Progress } from './ui/progress';
 import { Badge } from './ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback } from './ui/avatar';
-import { 
-  Mic, MicOff, Video, VideoOff, Pause, Play, SkipForward, 
-  Clock, MessageSquare, Bot, User, Volume2, VolumeX 
+import {
+  Mic, MicOff, Video, VideoOff, SkipForward, Clock, Bot,
+  Volume2, VolumeX, Play, Pause
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Navigate } from 'react-router-dom';
 
 export function MockInterviewSession({ user, accessToken, onNavigate }) {
+  const [showStartModal, setShowStartModal] = useState(true);
   const [isActive, setIsActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [timeRemaining, setTimeRemaining] = useState(1800); // 30 minutes
+  const [timeRemaining, setTimeRemaining] = useState(1800);
   const [questionTime, setQuestionTime] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isVideoOn, setIsVideoOn] = useState(true);
-  const [currentAnswer, setCurrentAnswer] = useState('');
-  const [responses, setResponses] = useState([]);
-  const [showHints, setShowHints] = useState(false);
+  const [isWebcamOn, setIsWebcamOn] = useState(true);
   const [interviewCompleted, setInterviewCompleted] = useState(false);
 
+  // question video audio/UI
+  const [qvMuted, setQvMuted] = useState(false);
+  const [qvPlaying, setQvPlaying] = useState(false);
+
   const navigate = useNavigate();
-  const videoRef = useRef(null);
+  const webcamRef = useRef(null);
+  const questionVideoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const streamRef = useRef(null);
 
-  // Mock questions - in a real app, these would be generated based on the setup
+  // Mock questions
   const questions = [
-    {
-      id: '1',
-      text: 'Tell me about yourself and why you\'re interested in this position.',
-      type: 'behavioral',
-      difficulty: 'easy',
-      expectedDuration: 120
-    },
-    {
-      id: '2',
-      text: 'Describe a challenging project you worked on and how you overcame the difficulties.',
-      type: 'behavioral',
-      difficulty: 'medium',
-      expectedDuration: 180
-    },
-    {
-      id: '3',
-      text: 'Explain the difference between REST and GraphQL APIs. When would you use each?',
-      type: 'technical',
-      difficulty: 'medium',
-      expectedDuration: 150
-    },
-    {
-      id: '4',
-      text: 'Write a function to find the longest substring without repeating characters.',
-      type: 'coding',
-      difficulty: 'medium',
-      expectedDuration: 300
-    },
-    {
-      id: '5',
-      text: 'How would you handle a situation where a team member consistently misses deadlines?',
-      type: 'behavioral',
-      difficulty: 'medium',
-      expectedDuration: 120
-    }
+    { id: '1', text: "Tell me about yourself and why you're interested in this position.", type: 'behavioral', difficulty: 'easy', expectedDuration: 120 },
+    { id: '2', text: 'Describe a challenging project you worked on and how you overcame the difficulties.', type: 'behavioral', difficulty: 'medium', expectedDuration: 180 },
+    { id: '3', text: 'Explain the difference between REST and GraphQL APIs. When would you use each?', type: 'technical', difficulty: 'medium', expectedDuration: 150 },
+    { id: '4', text: 'Write a function to find the longest substring without repeating characters.', type: 'coding', difficulty: 'medium', expectedDuration: 300 },
+    { id: '5', text: 'How would you handle a situation where a team member consistently misses deadlines?', type: 'behavioral', difficulty: 'medium', expectedDuration: 120 }
   ];
-
   const currentQuestion = questions[currentQuestionIndex];
 
-  useEffect(() => {
-    startInterview();
-    return () => {
-      cleanup();
-    };
-  }, []);
+  // file helpers
+  const getVideoSrc  = (i) => `/videos/Q${i + 1}.mp4`;
+  const getPosterSrc = (i) => `/videos/Q${i + 1}.jpg`; // optional poster
 
+  // timers
   useEffect(() => {
     let interval;
-    
     if (isActive && !isPaused) {
       interval = setInterval(() => {
-        setTimeRemaining(prev => {
+        setTimeRemaining((prev) => {
           if (prev <= 1) {
             endInterview();
             return 0;
           }
           return prev - 1;
         });
-        
-        setQuestionTime(prev => prev + 1);
+        setQuestionTime((prev) => prev + 1);
       }, 1000);
     }
-
     return () => clearInterval(interval);
   }, [isActive, isPaused]);
 
-  const startInterview = async () => {
+  // autoplay next video only after interview active
+  useEffect(() => {
+    if (isActive) {
+      playQuestionVideo({ resetToStart: true, preferSound: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentQuestionIndex, isActive]);
+
+  // Start: request cam/mic, then play video WITH sound
+  const handleStartInterview = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: true, 
-        audio: true 
-      });
-      
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+      if (webcamRef.current) webcamRef.current.srcObject = stream;
+      setIsActive(true);
+      setShowStartModal(false);
+      toast.success('Interview started! Good luck.');
+      await playQuestionVideo({ resetToStart: true, preferSound: true });
+    } catch (err) {
+      console.error('Permission error:', err);
+      toast.error('Please allow camera & microphone to proceed.');
+      // keep modal open so they can retry
+    }
+  };
+
+  // question video controls
+  const playQuestionVideo = async ({ resetToStart = false, preferSound = true } = {}) => {
+    const v = questionVideoRef.current;
+    if (!v) return;
+
+    const expectedSrc = getVideoSrc(currentQuestionIndex);
+    if (!v.src.endsWith(expectedSrc)) v.src = expectedSrc;
+
+    v.playsInline = true;
+    v.muted = !preferSound;
+    setQvMuted(v.muted);
+
+    if (resetToStart) {
+      try { v.currentTime = 0; } catch {}
+    }
+
+    try {
+      await v.play();
+      setQvPlaying(true);
+    } catch (err) {
+      // fallback: muted autoplay
+      v.muted = true;
+      setQvMuted(true);
+      try {
+        await v.play();
+        setQvPlaying(true);
+        toast.message('Click the speaker to unmute the question audio.');
+      } catch (err2) {
+        setQvPlaying(false);
       }
-      
-      setIsActive(true);
-      toast.success('Interview started! Good luck!');
-    } catch (error) {
-      console.error('Error accessing camera/microphone:', error);
-      toast.error('Could not access camera/microphone. You can still continue with text responses.');
-      setIsActive(true);
     }
   };
 
-  const cleanup = () => {
+  const pauseQuestionVideo = () => {
+    const v = questionVideoRef.current;
+    if (!v) return;
+    v.pause();
+    setQvPlaying(false);
+  };
+
+  const toggleQvMute = () => {
+    const v = questionVideoRef.current;
+    if (!v) return;
+    v.muted = !v.muted;
+    setQvMuted(v.muted);
+  };
+
+  // webcam/recording
+  const toggleWebcam = () => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getVideoTracks().forEach((t) => (t.enabled = !isWebcamOn));
+      setIsWebcamOn(!isWebcamOn);
     }
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
-  };
-
-  const togglePause = () => {
-    setIsPaused(!isPaused);
-    toast.info(isPaused ? 'Interview resumed' : 'Interview paused');
   };
 
   const toggleRecording = async () => {
     if (!streamRef.current) return;
-
     if (!isRecording) {
       try {
-        const mediaRecorder = new MediaRecorder(streamRef.current);
-        mediaRecorderRef.current = mediaRecorder;
-        mediaRecorder.start();
+        const mr = new MediaRecorder(streamRef.current);
+        mediaRecorderRef.current = mr;
+        mr.start();
         setIsRecording(true);
         toast.success('Recording started');
-      } catch (error) {
+      } catch {
         toast.error('Could not start recording');
       }
     } else {
-      if (mediaRecorderRef.current) {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
-        setIsRecording(false);
-        toast.success('Recording stopped');
       }
+      setIsRecording(false);
+      toast.success('Recording stopped');
     }
   };
 
-  const toggleMute = () => {
-    if (streamRef.current) {
-      streamRef.current.getAudioTracks().forEach(track => {
-        track.enabled = isMuted;
-      });
-      setIsMuted(!isMuted);
-    }
-  };
-
-  const toggleVideo = () => {
-    if (streamRef.current) {
-      streamRef.current.getVideoTracks().forEach(track => {
-        track.enabled = !isVideoOn;
-      });
-      setIsVideoOn(!isVideoOn);
-    }
-  };
-
+  // navigation
   const nextQuestion = () => {
-    // Save current answer
-    if (currentAnswer.trim() || isRecording) {
-      const response = {
-        questionId: currentQuestion.id,
-        answer: currentAnswer,
-        duration: questionTime,
-        timestamp: new Date()
-      };
-      setResponses(prev => [...prev, response]);
-    }
-
+    setQuestionTime(0);
     if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-      setCurrentAnswer('');
-      setQuestionTime(0);
+      setCurrentQuestionIndex((i) => i + 1);
       toast.success('Moving to next question');
     } else {
       endInterview();
@@ -201,32 +180,25 @@ export function MockInterviewSession({ user, accessToken, onNavigate }) {
     setIsActive(false);
     setInterviewCompleted(true);
     cleanup();
-     
-    // Save final answer if exists
-    if (currentAnswer.trim()) {
-      const response = {
-        questionId: currentQuestion.id,
-        answer: currentAnswer,
-        duration: questionTime,
-        timestamp: new Date()
-      };
-      setResponses(prev => [...prev, response]);
-    }
-
     toast.success('Interview completed!');
-    
-    // Navigate to results after a short delay
-    
     navigate('/interview-results');
-
   };
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  const cleanup = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
   };
 
+  // helpers
+  const formatTime = (s) => {
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return `${m.toString().padStart(2, '0')}:${r.toString().padStart(2, '0')}`;
+  };
   const getQuestionTypeColor = (type) => {
     switch (type) {
       case 'behavioral': return 'bg-blue-100 text-blue-800';
@@ -236,7 +208,6 @@ export function MockInterviewSession({ user, accessToken, onNavigate }) {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
-
   const getDifficultyColor = (difficulty) => {
     switch (difficulty) {
       case 'easy': return 'bg-green-100 text-green-800';
@@ -254,32 +225,22 @@ export function MockInterviewSession({ user, accessToken, onNavigate }) {
             <span className="text-2xl">✅</span>
           </div>
           <h2 className="text-2xl font-bold">Interview Completed!</h2>
-          <p className="text-muted-foreground">
-            Thank you for completing the mock interview. Your responses are being analyzed.
-          </p>
-          <div className="text-sm text-muted-foreground">
-            Redirecting to results in a moment...
-          </div>
+          <p className="text-muted-foreground">Thank you for completing the mock interview. Your responses are being analyzed.</p>
+          <div className="text-sm text-muted-foreground">Redirecting to results in a moment...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex bg-background">
-      {/* Left Panel - Video and Controls */}
+    <div className="h-screen flex bg-background relative">
+      {/* Left Panel */}
       <div className="w-1/3 border-r border-border p-4 space-y-4">
-        {/* Video Feed */}
         <Card>
           <CardContent className="p-4">
             <div className="aspect-video bg-black rounded-lg overflow-hidden relative">
-              {isVideoOn ? (
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  muted
-                  className="w-full h-full object-cover"
-                />
+              {isWebcamOn ? (
+                <video ref={webcamRef} autoPlay muted playsInline className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-white">
                   <div className="text-center">
@@ -288,8 +249,6 @@ export function MockInterviewSession({ user, accessToken, onNavigate }) {
                   </div>
                 </div>
               )}
-              
-              {/* Recording Indicator */}
               {isRecording && (
                 <div className="absolute top-2 left-2 flex items-center gap-2 bg-red-600 text-white px-2 py-1 rounded text-sm">
                   <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
@@ -300,27 +259,18 @@ export function MockInterviewSession({ user, accessToken, onNavigate }) {
           </CardContent>
         </Card>
 
-        {/* Controls */}
-        <div className="grid grid-cols-2 gap-2">
-          
-          <Button
-            variant="outline"
-            onClick={toggleVideo}
-            className={!isVideoOn ? 'bg-red-100 text-red-800' : ''}
-          >
-            {isVideoOn ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
+        <div className="grid grid-cols-3 gap-2">
+          <Button variant="outline" onClick={toggleWebcam} className={!isWebcamOn ? 'bg-red-100 text-red-800' : ''}>
+            {isWebcamOn ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
           </Button>
-          <Button
-            variant="outline"
-            onClick={toggleRecording}
-            className={isRecording ? 'bg-red-100 text-red-800' : ''}
-          >
+          <Button variant="outline" onClick={toggleRecording} className={isRecording ? 'bg-red-100 text-red-800' : ''}>
             {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
           </Button>
-          
+          <Button variant="outline" onClick={toggleQvMute}>
+            {qvMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </Button>
         </div>
 
-        {/* Timer and Progress */}
         <Card>
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
@@ -328,7 +278,6 @@ export function MockInterviewSession({ user, accessToken, onNavigate }) {
               <span className="text-lg font-mono">{formatTime(timeRemaining)}</span>
             </div>
             <Progress value={(1800 - timeRemaining) / 1800 * 100} className="h-2" />
-            
             <div className="flex items-center justify-between text-sm">
               <span>Question Time</span>
               <span className="font-mono">{formatTime(questionTime)}</span>
@@ -336,7 +285,6 @@ export function MockInterviewSession({ user, accessToken, onNavigate }) {
           </CardContent>
         </Card>
 
-        {/* Interview Progress */}
         <Card>
           <CardContent className="p-4">
             <div className="text-sm space-y-2">
@@ -350,44 +298,86 @@ export function MockInterviewSession({ user, accessToken, onNavigate }) {
         </Card>
       </div>
 
-      {/* Right Panel - Interview Content */}
+      {/* Right Panel */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <div className="border-b border-border p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Avatar>
-                <AvatarFallback>
-                  <Bot className="h-5 w-5" />
-                </AvatarFallback>
-              </Avatar>
+              <Avatar><AvatarFallback><Bot className="h-5 w-5" /></AvatarFallback></Avatar>
               <div>
                 <h2 className="font-semibold">AI Interviewer</h2>
                 <p className="text-sm text-muted-foreground">Mock Interview Session</p>
               </div>
             </div>
             <div className="flex gap-2">
-              
-              <Button variant="outline" size="sm" onClick={endInterview}>
-                End Interview
-              </Button>
+              <Button variant="outline" size="sm" onClick={endInterview}>End Interview</Button>
             </div>
           </div>
         </div>
 
-        {/* Question */}
+        {/* Question Video — fixed pixel height that never changes */}
+        <div className="p-4 border-b border-border">
+          <Card>
+            <CardContent className="p-3">
+              <div className="w-full rounded overflow-hidden relative">
+                {/* >>> ADJUST ONLY THIS NUMBER to resize (in pixels) <<< */}
+                <div className="w-full" style={{ height: 500 }}>
+                  <video
+                    key={currentQuestionIndex}
+                    ref={questionVideoRef}
+                    src={getVideoSrc(currentQuestionIndex)}
+                    poster={getPosterSrc(currentQuestionIndex)}
+                    preload="metadata"          // no buffering before start
+                    playsInline
+                    className="w-full h-full object-contain bg-black rounded"
+                    muted={qvMuted}
+                    onLoadedMetadata={(e) => {
+                      // don't autoplay until interview is active
+                      if (!isActive) return;
+                      playQuestionVideo({ resetToStart: false, preferSound: !qvMuted });
+                    }}
+                    onEnded={(e) => {
+                      const v = e.currentTarget;
+                      try {
+                        v.pause();
+                        if (!isNaN(v.duration) && isFinite(v.duration)) {
+                          v.currentTime = Math.max(0, v.duration - 0.05);
+                        }
+                      } catch {}
+                      setQvPlaying(false);
+                    }}
+                    onPlay={() => setQvPlaying(true)}
+                    onPause={() => setQvPlaying(false)}
+                  />
+                </div>
+
+                {/* Overlay play/pause fallback */}
+                <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                  {!qvPlaying ? (
+                    <Button size="sm" variant="secondary" onClick={() => playQuestionVideo({ preferSound: !qvMuted })}>
+                      <Play className="h-4 w-4 mr-1" /> Play
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="secondary" onClick={pauseQuestionVideo}>
+                      <Pause className="h-4 w-4 mr-1" /> Pause
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Question + Controls */}
         <div className="flex-1 p-6 space-y-6 overflow-y-auto">
           <Card>
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Badge className={getQuestionTypeColor(currentQuestion.type)}>
-                      {currentQuestion.type}
-                    </Badge>
-                    <Badge className={getDifficultyColor(currentQuestion.difficulty)}>
-                      {currentQuestion.difficulty}
-                    </Badge>
+                    <Badge className={getQuestionTypeColor(currentQuestion.type)}>{currentQuestion.type}</Badge>
+                    <Badge className={getDifficultyColor(currentQuestion.difficulty)}>{currentQuestion.difficulty}</Badge>
                   </div>
                   <CardTitle className="text-xl">
                     Question {currentQuestionIndex + 1} of {questions.length}
@@ -406,78 +396,10 @@ export function MockInterviewSession({ user, accessToken, onNavigate }) {
             </CardContent>
           </Card>
 
-          {/* Hints */}
-          {showHints && (
-            <Card className="bg-blue-50 border-blue-200">
-              <CardHeader>
-                <CardTitle className="text-blue-800 flex items-center gap-2">
-                  <span>💡</span>
-                  Helpful Tips
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-blue-700">
-                <ul className="space-y-1 text-sm">
-                  {currentQuestion.type === 'behavioral' && (
-                    <>
-                      <li>• Use the STAR method (Situation, Task, Action, Result)</li>
-                      <li>• Be specific with examples and quantify results</li>
-                      <li>• Show what you learned from the experience</li>
-                    </>
-                  )}
-                  {currentQuestion.type === 'technical' && (
-                    <>
-                      <li>• Think out loud and explain your reasoning</li>
-                      <li>• Consider trade-offs and alternatives</li>
-                      <li>• Ask clarifying questions if needed</li>
-                    </>
-                  )}
-                  {currentQuestion.type === 'coding' && (
-                    <>
-                      <li>• Start with a brute force solution, then optimize</li>
-                      <li>• Test your solution with edge cases</li>
-                      <li>• Explain time and space complexity</li>
-                    </>
-                  )}
-                </ul>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Answer Input */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                Your Response
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                placeholder="Type your answer here... You can also use voice recording above."
-                value={currentAnswer}
-                onChange={(e) => setCurrentAnswer(e.target.value)}
-                rows={8}
-                className="resize-none"
-              />
-              
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">
-                  {currentAnswer.length} characters
-                  {isRecording && (
-                    <span className="ml-2 text-red-600 flex items-center gap-1">
-                      <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
-                      Recording audio response
-                    </span>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
           <div className="flex gap-2">
             {currentQuestionIndex < questions.length - 1 ? (
               <Button onClick={nextQuestion}>
-                Next Question
-                <SkipForward className="h-4 w-4 ml-2" />
+                Next Question <SkipForward className="h-4 w-4 ml-2" />
               </Button>
             ) : (
               <Button onClick={endInterview} className="bg-green-600 hover:bg-green-700">
@@ -487,6 +409,32 @@ export function MockInterviewSession({ user, accessToken, onNavigate }) {
           </div>
         </div>
       </div>
+
+      {/* Start Modal (blurred) */}
+      {showStartModal && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <Card className="w-full max-w-lg">
+              <CardHeader>
+                <CardTitle className="text-xl">Start Mock Interview</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  When you click <b>Start</b>, your browser will ask to use your <b>camera</b> and <b>microphone</b>.
+                  After you allow access, the question video will play with sound. (You can mute/unmute anytime.)
+                </p>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => setShowStartModal(false)}>Cancel</Button>
+                  <Button onClick={handleStartInterview}>Start</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+export default MockInterviewSession;

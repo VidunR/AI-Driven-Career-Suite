@@ -1,22 +1,20 @@
 // Components/CVPicker.jsx
-import React, { useState, useMemo, useEffect } from "react";
-import ReactDOM from "react-dom";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
+import React, { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { Calendar, CheckCircle2, X } from "lucide-react";
+import { FileText, X, Check } from "lucide-react";
 
-/**
- * Glassmorphism modal CV picker rendered in a portal so layout is never constrained.
- *
- * Props:
- * - open: boolean
- * - onClose: () => void
- * - onConfirm: (cv) => void
- * - items?: Array<{ id: string; name: string; modifiedDate: string; isDefault?: boolean }>
- */
-export default function CVPicker({ open, onClose, onConfirm, items }) {
-  const [selectedId, setSelectedId] = useState(null);
+/** Dialog that matches your Confirm/Password modals */
+export default function CVPicker({
+  open,
+  onClose,
+  onConfirm,
+  items = [],
+  currentCVId = "",
+}) {
+  const [tempChoice, setTempChoice] = useState(currentCVId || "");
+
+  useEffect(() => setTempChoice(currentCVId || ""), [currentCVId, open]);
 
   // Close on ESC
   useEffect(() => {
@@ -26,133 +24,118 @@ export default function CVPicker({ open, onClose, onConfirm, items }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  // Lock background scroll while modal is open
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.documentElement.style.overflow;
-    document.documentElement.style.overflow = "hidden";
-    return () => {
-      document.documentElement.style.overflow = prev || "";
-    };
-  }, [open]);
-
-  const cvs = useMemo(
-    () =>
-      items?.length
-        ? items
-        : [
-            { id: "cv-101", name: "Software Engineer – ATS v3", modifiedDate: "2025-08-30T10:05:00Z", isDefault: true },
-            { id: "cv-102", name: "Frontend Focus – React/TS", modifiedDate: "2025-08-20T14:22:00Z" },
-            { id: "cv-103", name: "Backend & DevOps Profile", modifiedDate: "2025-08-10T09:10:00Z" },
-          ],
-    [items]
-  );
-
-  const selectedCv = cvs.find((cv) => cv.id === selectedId) || null;
-
   if (!open) return null;
 
-  // Modal tree rendered to body
-  return ReactDOM.createPortal(
-    <div
-      className="fixed inset-0 z-[999] flex items-center justify-center"
-      aria-modal="true"
-      role="dialog"
-    >
-      {/* Backdrop: dark + blur so foreground pops, page behind is dimmed */}
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-md"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Centered container (not constrained by app layout) */}
-      <div className="relative w-[96vw] max-w-5xl mx-auto px-3 sm:px-6">
-        {/* Glass panel: semi-opaque + strong blur; high contrast text in both themes */}
-        <div
-          className="
-            relative overflow-hidden rounded-2xl shadow-2xl
-            border border-white/10
-            bg-gradient-to-br from-white/92 to-white/80 text-slate-900
-            supports-[backdrop-filter]:bg-white/35 supports-[backdrop-filter]:backdrop-blur-2xl
-            dark:from-slate-900/92 dark:to-slate-900/80 dark:text-slate-100
-            dark:supports-[backdrop-filter]:bg-slate-900/45
-          "
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="flex items-start sm:items-center justify-between gap-4 px-6 py-5 border-b border-white/10">
-            <div className="space-y-1">
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Choose a CV to Match Jobs</h2>
-              <p className="text-sm opacity-85">
-                Select which CV you want to use for tailoring and job matching.
-              </p>
-            </div>
-            <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
-              <X className="w-5 h-5" />
-            </Button>
+      {/* Modal */}
+      <div className="relative bg-background dark:bg-gray-900 text-white rounded-lg shadow-lg border border-gray-700 max-w-2xl w-full mx-4 p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">Choose a CV for Job Suggestions</h2>
           </div>
+          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
 
-          {/* Content */}
-          <div className="p-6">
-            {/* Grid of CV cards: tidy spacing, consistent sizing */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {cvs.map((cv) => {
-                const isActive = cv.id === selectedId;
-                return (
-                  <Card
-                    key={cv.id}
-                    className={`
-                      transition-all cursor-pointer
-                      border-border bg-background/80
-                      supports-[backdrop-filter]:bg-background/60 supports-[backdrop-filter]:backdrop-blur
-                      hover:shadow-lg
-                      ${isActive ? "ring-2 ring-primary" : ""}
-                    `}
-                    onClick={() => setSelectedId(cv.id)}
-                  >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <CardTitle className="text-base sm:text-lg truncate">{cv.name}</CardTitle>
-                          <CardDescription className="text-sm flex items-center gap-1 opacity-90">
-                            <Calendar className="w-4 h-4" />
-                            {new Date(cv.modifiedDate).toLocaleDateString()}
-                          </CardDescription>
-                        </div>
-                        {cv.isDefault && (
-                          <Badge className="bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                            Default
+        {/* List */}
+        <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+          {items.map((cv) => {
+            const isSelected = tempChoice === cv.id;
+            return (
+              <button
+                key={cv.id}
+                onClick={() => setTempChoice(cv.id)}
+                className={`w-full text-left rounded-lg border p-4 transition-all duration-200 ${
+                  isSelected
+                    ? "border-primary/60 bg-primary/5 shadow-md shadow-primary/10"
+                    : "border-gray-700 hover:border-gray-600 hover:bg-gray-800/50"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`p-2 rounded-md transition-colors ${
+                    isSelected ? "bg-primary/15 text-primary" : "bg-gray-800 text-gray-400"
+                  }`}>
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold">{cv.name}</p>
+                        {isSelected && (
+                          <div className="flex items-center gap-1">
+                            <Check className="h-4 w-4 text-primary" />
+                            <Badge className="bg-primary/15 text-primary border-primary/30 text-xs">
+                              Selected
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {cv.role && (
+                      <p className="text-sm text-gray-400 mt-1">
+                        {cv.role}{cv.experienceLevel ? ` • ${cv.experienceLevel}` : ""}
+                      </p>
+                    )}
+                    {Array.isArray(cv.skills) && cv.skills.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {cv.skills.slice(0, 5).map((s, i) => (
+                          <Badge 
+                            key={i} 
+                            variant="outline" 
+                            className={`text-xs ${
+                              isSelected 
+                                ? "border-primary/40 text-primary/90" 
+                                : "border-gray-600 text-gray-300"
+                            }`}
+                          >
+                            {s}
+                          </Badge>
+                        ))}
+                        {cv.skills.length > 5 && (
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs ${
+                              isSelected 
+                                ? "border-primary/40 text-primary/90" 
+                                : "border-gray-600 text-gray-300"
+                            }`}
+                          >
+                            +{cv.skills.length - 5} more
                           </Badge>
                         )}
                       </div>
-                    </CardHeader>
-                    <CardContent className="flex items-center justify-between pt-0">
-                      <div className="text-sm opacity-85">
-                        {isActive ? "Selected" : "Click to select"}
-                      </div>
-                      {isActive && <CheckCircle2 className="w-5 h-5 text-primary" />}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+                    )}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
 
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-2 mt-6">
-              <Button variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button onClick={() => selectedCv && onConfirm(selectedCv)} disabled={!selectedCv}>
-                Use This CV
-              </Button>
-            </div>
-          </div>
-
-          {/* subtle ring to define edges on blurred bg */}
-          <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-white/10" />
+        {/* Footer */}
+        <div className="flex justify-end gap-2 mt-6">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button
+            onClick={() => {
+              const chosen = items.find((c) => c.id === tempChoice);
+              if (chosen) onConfirm(chosen);
+            }}
+            disabled={!tempChoice}
+          >
+            Use This CV
+          </Button>
         </div>
       </div>
-    </div>,
-    document.body
+    </div>
   );
 }
