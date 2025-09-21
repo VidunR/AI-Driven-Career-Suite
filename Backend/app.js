@@ -11,6 +11,7 @@ import interviewRouter from './routes/InterviewRoute.js'
 import cvbuilderRouter from './routes/CvBuilderRoute.js'
 import cvmanagerRouter from './routes/CVManagerRoute.js'
 import applayoutRouter from './routes/AppLayoutRouter.js'
+import jobsearchRouter from './routes/JobSearchRoute.js'
 
 const app = express();
 
@@ -31,6 +32,9 @@ app.use('/cvbuilder', cvbuilderRouter);
 
 // Call the CV Manager
 app.use('/cvmanager', cvmanagerRouter);
+
+// Call the Job Search
+app.use('/jobsearch', jobsearchRouter);
 
 // Call Leaderboard router
 app.use('/leaderboard', leaderboardRouter);

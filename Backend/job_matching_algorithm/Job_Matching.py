@@ -4,6 +4,7 @@ import io
 import json
 import datetime
 from typing import List, Dict, Optional, Tuple
+import sys
 
 import pdfplumber
 import requests
@@ -14,7 +15,20 @@ from rapidfuzz import fuzz, process
 import spacy
 from keybert import KeyBERT
 
-# --- optional imports for fallbacks
+# -------------------------------
+# NEW: OCR deps you asked to use
+# -------------------------------
+from pdf2image import convert_from_path
+import pytesseract
+from PIL import Image
+from dotenv import load_dotenv
+load_dotenv()
+
+# Tesseract/Poppler from .env
+pytesseract.pytesseract.tesseract_cmd = os.getenv("PYTESSERACT_PATH", "")
+POPPLER_PATH = os.getenv("POPPLER_PATH", "")
+
+# --- optional imports (kept as in your file)
 _EASYOCR_AVAILABLE = True
 _EASYOCR_IMPORT_ERR = None
 try:
@@ -48,10 +62,12 @@ except Exception:
 # =========================
 # CONFIG
 # =========================
-APIJOBS_URL = "https://api.apijobs.dev/v1/job/search"
-APIJOBS_KEY = "ec5d23a2be3de56a9e4b8a2f5f5e2a6b96ccd6639af734e777837bac8c07793c"  # move to env var in prod
+APIJOBS_URL = os.getenv("JOB_API_URL", "")
+APIJOBS_KEY = os.getenv("API_JOB_DEV", "")
 
-CV_PATH = "CV2.pdf"
+CV_Name = "PM.pdf"
+# Default fallback if no CLI arg is provided
+CV_PATH = f"../assets/CVs/{CV_Name}"
 
 # Title extraction
 TITLE_SCAN_RATIO = 0.25
@@ -149,7 +165,92 @@ SOFT_ALLOWLIST_HINTS = [
 ]
 
 # =========================
-# Helpers (keep your PDF logic as-is)
+# Path resolution helpers (NEW)
+# =========================
+def _project_root() -> str:
+    """
+    Returns the absolute project root (folder that contains 'Backend/').
+    Assumes this file lives at: <root>/Backend/job_matching_algorithm/Job_Matching.py
+    """
+    this_dir = os.path.dirname(os.path.abspath(__file__))
+    backend_dir = os.path.dirname(this_dir)  # ../Backend
+    root_dir = os.path.dirname(backend_dir)  # ..
+    return root_dir
+
+def _abs_from_project_root(rel_path: str) -> str:
+    """
+    Make an absolute path from a path relative to the project root.
+    Example: 'assets/CVs/PM.pdf' -> '<root>/assets/CVs/PM.pdf'
+    """
+    root = _project_root()
+    return os.path.normpath(os.path.join(root, rel_path))
+
+def resolve_cv_path_from_arg(arg: Optional[str]) -> Tuple[Optional[str], dict]:
+    """
+    Accept either:
+      - None: use CV_PATH constant (backward-compatible)
+      - Plain string path: direct path (abs or relative to project root)
+      - JSON: {"cvId": 1, "filepath": "assets/CVs/TonyAiyaCV.pdf"}
+    Returns: (absolute_path_or_None, debug_dict)
+    """
+    dbg = {"source": None, "received": arg}
+
+    # 1) No arg → use CV_PATH
+    if arg is None:
+        dbg["source"] = "default_constant"
+        path = CV_PATH
+        if not os.path.isabs(path):
+            path = _abs_from_project_root(path)
+        return (path if os.path.exists(path) else None, dbg)
+
+    arg_str = str(arg).strip()
+
+    # 2) JSON payload
+    if arg_str.startswith("{") and arg_str.endswith("}"):
+        try:
+            payload = json.loads(arg_str)
+            dbg["source"] = "json_arg"
+            dbg["payload_keys"] = list(payload.keys())
+            cv_id = payload.get("cvId") or payload.get("id")
+            if cv_id is not None:
+                dbg["cvId"] = cv_id
+            filepath = payload.get("filepath")
+            if not filepath:
+                dbg["error"] = "JSON missing 'filepath'."
+                return None, dbg
+            if os.path.isabs(filepath):
+                abs_path = filepath
+            else:
+                abs_path = _abs_from_project_root(filepath)
+            dbg["resolved_path"] = abs_path
+            if not os.path.exists(abs_path):
+                dbg["error"] = f"Resolved path does not exist: {abs_path}"
+                return None, dbg
+            return abs_path, dbg
+        except Exception as e:
+            dbg["source"] = "json_arg"
+            dbg["error"] = f"Invalid JSON argument: {e}"
+            return None, dbg
+
+    # 3) cvId-only not supported in Python
+    if arg_str.isdigit():
+        dbg["source"] = "cvId_only"
+        dbg["error"] = "cvId-only not supported here. Resolve cvId→filepath in Node and pass 'filepath'."
+        return None, dbg
+
+    # 4) Plain string path (resolve from project root if relative)
+    dbg["source"] = "string_path"
+    candidate = arg_str
+    if not os.path.isabs(candidate):
+        candidate = _abs_from_project_root(candidate)
+    dbg["resolved_path"] = candidate
+    if not os.path.exists(candidate):
+        dbg["error"] = f"Path not found: {candidate}"
+        return None, dbg
+    return candidate, dbg
+
+# =========================
+# Helpers (PDF text first; OCR fallback using pdf2image + pytesseract)
 # =========================
 def pdf_to_text(pdf_file: str) -> str:
     all_text = ""
@@ -164,51 +265,25 @@ def clean_whitespace(t: str) -> str:
     t = re.sub(r"\n{2,}", "\n", t)
     return t.strip()
 
-# --- NEW: OCR/PDF image fallback (no Tesseract/Poppler)
-def ocr_pdf_with_easyocr(path: str) -> Tuple[str, Dict]:
+def ocr_pdf_with_pytesseract(path: str) -> Tuple[str, Dict]:
     """
-    Rasterize each page with PyMuPDF and OCR via EasyOCR.
+    Convert each PDF page to an image via Poppler (pdf2image), then OCR with Tesseract.
     Returns (text, debug_dict)
     """
-    debug = {"engine": "easyocr+pymupdf", "pages": [], "errors": []}
-    if not _PYMUPDF_AVAILABLE:
-        debug["errors"].append(f"PyMuPDF not available: {_PYMUPDF_IMPORT_ERR}")
-        return "", debug
-    if not _EASYOCR_AVAILABLE:
-        debug["errors"].append(f"EasyOCR not available: {_EASYOCR_IMPORT_ERR}")
-        return "", debug
-
+    debug = {"engine": "pytesseract+pdf2image", "pages": []}
     try:
-        reader = easyocr.Reader(["en"], gpu=False)
+        pages = convert_from_path(path, poppler_path=POPPLER_PATH)
     except Exception as e:
-        debug["errors"].append(f"EasyOCR init error: {e}")
-        return "", debug
+        return "", {"error": f"pdf2image failed: {e}"}
 
     text_chunks = []
-    try:
-        doc = fitz.open(path)
-        for pi in range(len(doc)):
-            page = doc[pi]
-            # render at decent DPI for OCR
-            zoom = 2.0  # ~ 144 DPI (72 * 2)
-            mat = fitz.Matrix(zoom, zoom)
-            pix = page.get_pixmap(matrix=mat, alpha=False)
-            img_bytes = pix.tobytes("png")
-            try:
-                result = reader.readtext(img_bytes, detail=0, paragraph=True)
-                pg_text = "\n".join(result).strip()
-                text_chunks.append(pg_text)
-                debug["pages"].append({"page": pi+1, "chars": len(pg_text)})
-            except Exception as e:
-                debug["errors"].append(f"OCR page {pi+1} error: {e}")
-        doc.close()
-    except Exception as e:
-        debug["errors"].append(f"PyMuPDF open/render error: {e}")
-        return "", debug
-
+    for i, page in enumerate(pages, start=1):
+        text = pytesseract.image_to_string(page, lang="eng")
+        text_chunks.append(text)
+        debug["pages"].append({"page": i, "chars": len(text)})
     return clean_whitespace("\n".join(text_chunks)), debug
 
-# --- NEW: DOCX
+# --- DOCX
 def docx_to_text(path: str) -> Tuple[str, Dict]:
     dbg = {"engine": "python-docx", "paras": 0}
     if not _DOCX_AVAILABLE:
@@ -224,13 +299,11 @@ def docx_to_text(path: str) -> Tuple[str, Dict]:
     except Exception as e:
         return "", {"engine": "python-docx", "error": str(e)}
 
-# --- NEW: DOC (Windows COM fallback)
+# --- DOC (Windows COM fallback)
 def doc_to_text_via_word(path: str) -> Tuple[str, Dict]:
     dbg = {"engine": "win32com+Word", "converted": False}
     if not _WIN32_AVAILABLE:
         return "", {"engine": "win32com+Word", "error": "win32com not available or not Windows/MS Word not installed"}
-
-    # Convert .doc to .docx using Word, then parse with python-docx
     try:
         import tempfile
         base = os.path.splitext(os.path.basename(path))[0]
@@ -255,11 +328,11 @@ def doc_to_text_via_word(path: str) -> Tuple[str, Dict]:
         dbg["error"] = f"Word automation failed: {e}"
         return "", dbg
 
-# --- NEW: central router that preserves your current PDF flow
+# --- Central router (PDF → text → OCR fallback)
 def extract_text_any(path: str) -> Tuple[str, Dict]:
     """
-    Returns (text, debug_info). Keeps your pdfplumber flow first.
-    - PDF: pdfplumber -> if too little text, OCR with EasyOCR+PyMuPDF.
+    Returns (text, debug_info).
+    - PDF: pdfplumber -> if too little text, OCR with pdf2image + pytesseract (YOUR method).
     - DOCX: python-docx
     - DOC: Word COM (Windows) -> docx -> python-docx
     """
@@ -267,14 +340,12 @@ def extract_text_any(path: str) -> Tuple[str, Dict]:
     debug = {"file": path, "ext": ext, "steps": []}
 
     if ext == ".pdf":
-        # Your original logic
         t_pdf = pdf_to_text(path)
         debug["steps"].append({"step": "pdfplumber", "chars": len(t_pdf)})
         if len(t_pdf) >= 50:  # heuristic threshold
             return t_pdf, debug
 
-        # OCR fallback for image-based PDFs
-        t_ocr, dbg_ocr = ocr_pdf_with_easyocr(path)
+        t_ocr, dbg_ocr = ocr_pdf_with_pytesseract(path)
         debug["steps"].append({"step": "ocr_fallback", **dbg_ocr, "chars": len(t_ocr)})
         return t_ocr, debug
 
@@ -651,7 +722,7 @@ def cv_path_to_jobs(cv_path: str) -> dict:
     if not os.path.exists(cv_path):
         return {"error": f"File not found: {cv_path}"}
 
-    # NEW: central text extraction router (PDF kept as-is, with OCR fallback)
+    # central text extraction router (PDF with OCR fallback)
     text, debug_extract = extract_text_any(cv_path)
     if not text or len(text) < 20:
         return {"error": "Could not extract text from file (no content found).",
@@ -661,10 +732,10 @@ def cv_path_to_jobs(cv_path: str) -> dict:
     nlp = load_spacy()
     kb = load_keybert()
 
-    # Country/City detection (GeoText + spaCy GPE + city->country)
+    # Country/City detection
     country_final, city_found, mode = extract_country_city(text, nlp)
 
-    # Role (heuristics) + canonicalization (synonym map)
+    # Role (heuristics) + canonicalization
     raw_role = extract_job_title(text)
     role_final = canonicalize_role(raw_role)
     role_terms = role_synonyms_for(role_final if role_final else raw_role)
@@ -676,7 +747,7 @@ def cv_path_to_jobs(cv_path: str) -> dict:
     # KeyBERT skills/phrases (telemetry only)
     top_keywords = keybert_keywords(kb, text, top_n=25)
 
-    # Build request (q = ONLY the role; country from CV or city->country)
+    # Build request
     body = build_search_body(country_final or None, role_final or raw_role or None)
 
     # Call API
@@ -717,5 +788,16 @@ def cv_path_to_jobs(cv_path: str) -> dict:
 # Run
 # =========================
 if __name__ == "__main__":
-    result = cv_path_to_jobs(CV_PATH)
+    
+    arg = sys.argv[1] if len(sys.argv) > 1 else None
+
+    resolved_path, dbg = resolve_cv_path_from_arg(arg)
+    if not resolved_path:
+        print(json.dumps({
+            "error": "CV file not found or input invalid",
+            "_debug_input": dbg
+        }, indent=2))
+        sys.exit(1)
+
+    result = cv_path_to_jobs(resolved_path)
     print(json.dumps(result, indent=2))
