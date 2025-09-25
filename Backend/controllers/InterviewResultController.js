@@ -19,6 +19,7 @@ export const getInterviewResults = async(req, res) => {
                 interviewDuration: true,
                 isCompleted: true,
                 experienceLevel: true,
+                feedbackJson: true,
                 interview_performance_breakdown: {
                     select: {
                         performance_breakdown:{

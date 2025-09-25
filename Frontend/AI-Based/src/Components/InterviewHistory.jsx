@@ -12,17 +12,28 @@ import {
 } from "./ui/select";
 import { Search, Eye, Trash2, Play } from "lucide-react";
 import { toast } from "sonner";
-import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 export function InterviewHistory({ user, onNavigate }) {
+  const navigate = useNavigate();
+
+  // helper: use onNavigate if it's a function, else fall back to router navigate
+  const go = (path) => {
+    if (typeof onNavigate === "function") {
+      onNavigate(path);
+    } else {
+      navigate(path.startsWith("/") ? path : `/${path}`);
+    }
+  };
+
   const [sessions, setSessions] = useState([]);
   const [filteredSessions, setFilteredSessions] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [jobRoleFilter, setJobRoleFilter] = useState(""); // filter by jobRoleName
   const [isLoading, setIsLoading] = useState(true);
 
-  // Available job roles
+  // Keep your original list
   const jobRoles = [
     "Software Engineer",
     "Cybersecurity Specialist",
@@ -30,8 +41,6 @@ export function InterviewHistory({ user, onNavigate }) {
     "Project Manager",
     "Digital Marketer",
   ];
-
-  const navigate = useNavigate();
 
   // Fetch interview history from backend
   useEffect(() => {
@@ -50,10 +59,10 @@ export function InterviewHistory({ user, onNavigate }) {
           position: s.jobRoleName,
           company: "N/A", // backend doesn't return company
           type: "mixed", // default type
-          duration: s.interviewDuration * 60, // convert minutes to seconds
+          duration: (s.interviewDuration || 0) * 60, // convert minutes to seconds
           score: s.completedPercentage, // use completedPercentage as score
           status: s.isCompleted ? "completed" : "partial",
-          questionsCompleted: s.completedPercentage / 20, // placeholder
+          questionsCompleted: (s.completedPercentage || 0) / 20, // placeholder
           totalQuestions: 5, // placeholder
         }));
 
@@ -77,7 +86,7 @@ export function InterviewHistory({ user, onNavigate }) {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter((s) =>
-        s.position.toLowerCase().includes(q)
+        (s.position || "").toLowerCase().includes(q)
       );
     }
 
@@ -126,12 +135,10 @@ export function InterviewHistory({ user, onNavigate }) {
             Review your past mock interview sessions
           </p>
         </div>
-        <Link to="/mock-interview-setup">
-          <Button onClick={() => onNavigate("mock-interview-setup")}>
-            <Play className="h-4 w-4 mr-2" />
-            New Interview
-          </Button>
-        </Link>
+        <Button onClick={() => go("mock-interview-setup")}>
+          <Play className="h-4 w-4 mr-2" />
+          New Interview
+        </Button>
       </div>
 
       {/* Filters */}
@@ -208,7 +215,12 @@ export function InterviewHistory({ user, onNavigate }) {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => navigate('/interview-results')}
+                    onClick={() =>
+                      // pass the interview id to the results page
+                      navigate("/interview-results", {
+                        state: { interviewId: session.id },
+                      })
+                    }
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     View Results
@@ -230,10 +242,7 @@ export function InterviewHistory({ user, onNavigate }) {
         {filteredSessions.length === 0 && (
           <div className="text-center py-12">
             <p className="text-muted-foreground">No interview sessions found.</p>
-            <Button
-              className="mt-4"
-              onClick={() => onNavigate("mock-interview-setup")}
-            >
+            <Button className="mt-4" onClick={() => go("mock-interview-setup")}>
               Start Your First Interview
             </Button>
           </div>
@@ -242,3 +251,5 @@ export function InterviewHistory({ user, onNavigate }) {
     </div>
   );
 }
+
+export default InterviewHistory;

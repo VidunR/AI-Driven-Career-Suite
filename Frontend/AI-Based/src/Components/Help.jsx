@@ -251,7 +251,16 @@ export function Help({ user, accessToken, onNavigate }) {
                     </div>
                   </div>
                   
-                  
+                  <div className="flex items-center gap-3">
+                    <MessageCircle className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">Live Chat</p>
+                      <p className="text-sm text-muted-foreground">Available 9 AM - 6 PM EST</p>
+                      <Button variant="outline" size="sm" className="mt-2">
+                        Start Chat
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>

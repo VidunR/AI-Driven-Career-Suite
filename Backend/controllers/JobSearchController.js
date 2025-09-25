@@ -4,6 +4,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 
+
 // Recreate __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -137,4 +138,30 @@ export const extractSelectedCVJobs = async (req, res) => {
     return res.status(500).json({ errorMessage: `An error occurred: ${err.message || err}` });
   }
 };
+
+// Get Jobs using Keyword Search
+
+/*export const getJobsWithoutExtract = async (req, res) => {
+  const { jobTitle, country } = req.body;
+
+  try {
+    const response = await axios.get("https://api.apijobs.dev/v1/job/search", {
+      headers: {
+        "apikey": process.env.API_JOB_DEV,
+      },
+      params: {
+        country: country,
+        q: jobTitle
+      }
+    });
+
+    return res.status(200).json(response.data);
+
+  } catch (err) {
+    console.error("APIJobDev error:", err.message || err);
+    return res
+      .status(500)
+      .json({ errorMessage: `An error occurred: ${err.message || err}` });
+  }
+};*/
 

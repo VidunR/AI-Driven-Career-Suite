@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { deleteAccount, getEmail, getNotificationDetails, getPreference, getPrivacyDetails, saveSettings } from "../controllers/SettingsController.js";
+import { deleteAccount, getEmail, getNotificationDetails, getPreference, getPrivacyDetails, saveSettings, updatePassword } from "../controllers/SettingsController.js";
 import { authenticateToken } from "../middleware/AuthMiddleWare.js";
 
 const router = Router();
@@ -21,5 +21,8 @@ router.delete('/account', authenticateToken, deleteAccount)
 
 // Settings before change
 router.post('/update', authenticateToken, saveSettings);
+
+// Settings update password
+router.put('/updatepassword', authenticateToken, updatePassword);
 
 export default router;
