@@ -54,17 +54,18 @@ export function InterviewHistory({ user, onNavigate }) {
 
         // Map backend data to frontend structure
         const mappedSessions = res.data.map((s) => ({
-          id: s.interviewId,
-          date: new Date(s.interviewDate),
-          position: s.jobRoleName,
-          company: "N/A", // backend doesn't return company
-          type: "mixed", // default type
-          duration: (s.interviewDuration || 0) * 60, // convert minutes to seconds
-          score: s.completedPercentage, // use completedPercentage as score
-          status: s.isCompleted ? "completed" : "partial",
-          questionsCompleted: (s.completedPercentage || 0) / 20, // placeholder
-          totalQuestions: 5, // placeholder
-        }));
+        id: s.interviewId,
+        date: new Date(s.interviewDate),
+        position: s.jobRoleName || "N/A",
+        company: "N/A", // still placeholder
+        type: "technical",  // still placeholder
+        duration: (s.interviewDuration || 0) * 60,
+        completedPercent: s.completedPercentage || 0,
+        status: s.isCompleted ? "completed" : "partial",
+        questionsCompleted: Math.round(((s.completedPercentage || 0) / 100) * 5),
+        totalQuestions: 5,
+      }));
+
 
         setSessions(mappedSessions);
         setFilteredSessions(mappedSessions);
@@ -104,15 +105,28 @@ export function InterviewHistory({ user, onNavigate }) {
     return `${minutes}m`;
   };
 
-  const getScoreColor = (score) => {
-    if (score >= 80) return "text-green-600";
-    if (score >= 70) return "text-yellow-600";
+  const getcompletedPercentColor = (completedPercent) => {
+    if (completedPercent >= 80) return "text-green-600";
+    if (completedPercent >= 70) return "text-yellow-600";
     return "text-red-600";
   };
 
-  const deleteSession = (sessionId) => {
-    setSessions((prev) => prev.filter((s) => s.id !== sessionId));
-    toast.success("Interview session deleted");
+  const deleteInterview = async (interviewId) => {
+    try {
+      const token = localStorage.getItem("jwtToken");
+
+      await axios.delete("http://localhost:5000/interviewhistory", {
+        headers: { Authorization: `Bearer ${token}` },
+        data: { interviewID: interviewId },
+      });
+
+      // update state after success
+      setSessions((prev) => prev.filter((s) => s.id !== interviewId));
+      toast.success("Interview session deleted");
+    } catch (err) {
+      console.error("Delete interview failed:", err);
+      toast.error("Failed to delete interview");
+    }
   };
 
   if (isLoading) {
@@ -182,31 +196,31 @@ export function InterviewHistory({ user, onNavigate }) {
           </CardContent>
         </Card>
 
-        {filteredSessions.map((session) => (
-          <Card key={session.id}>
+        {filteredSessions.map((interview) => (
+          <Card key={interview.id}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-2">
-                  <h3 className="font-semibold text-lg">{session.position}</h3>
+                  <h3 className="font-semibold text-lg">{interview.position}</h3>
                   <div className="flex flex-wrap items-center gap-4 text-sm">
-                    <Badge variant="outline">{session.type}</Badge>
+                    <Badge variant="outline">{interview.type}</Badge>
                     <Badge
                       variant={
-                        session.status === "completed" ? "default" : "secondary"
+                        interview.status === "completed" ? "default" : "secondary"
                       }
                     >
-                      {session.status}
+                      {interview.status}
                     </Badge>
                     <span>
-                      {session.date.toLocaleDateString(undefined, {
+                      {interview.date.toLocaleDateString(undefined, {
                         year: "numeric",
                         month: "short",
                         day: "2-digit",
                       })}
                     </span>
-                    <span>{formatDuration(session.duration)}</span>
-                    <span className={getScoreColor(session.score)}>
-                      {session.score}%
+                    <span>{formatDuration(interview.duration)}</span>
+                    <span className={getcompletedPercentColor(interview.completedPercent)}>
+                      {interview.completedPercent}%
                     </span>
                   </div>
                 </div>
@@ -218,7 +232,7 @@ export function InterviewHistory({ user, onNavigate }) {
                     onClick={() =>
                       // pass the interview id to the results page
                       navigate("/interview-results", {
-                        state: { interviewId: session.id },
+                        state: { interviewId: interview.id },
                       })
                     }
                   >
@@ -228,7 +242,7 @@ export function InterviewHistory({ user, onNavigate }) {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => deleteSession(session.id)}
+                    onClick={() => deleteInterview(interview.id)}
                     title="Delete session"
                   >
                     <Trash2 className="h-4 w-4" />

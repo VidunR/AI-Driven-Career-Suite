@@ -1,10 +1,13 @@
 import { Router } from "express";
-import { getInterviewHistoryDetails } from "../controllers/InterviewHistoryController.js";
+import { deleteInterview, getInterviewHistoryDetails } from "../controllers/InterviewHistoryController.js";
 import { authenticateToken } from "../middleware/AuthMiddleWare.js";
 
 const router = Router();
 
-// Register User
+// Register Interview
 router.get('', authenticateToken, getInterviewHistoryDetails);
+
+// Delete Interview
+router.delete('', authenticateToken, deleteInterview);
 
 export default router;

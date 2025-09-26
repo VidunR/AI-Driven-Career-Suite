@@ -18,7 +18,7 @@ export function MockInterviewSession() {
   const [isActive, setIsActive] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [questions, setQuestions] = useState([]);
-  const [timeRemaining, setTimeRemaining] = useState(1800);
+  const [timeRemaining, setTimeRemaining] = useState(900);
   const [questionTime, setQuestionTime] = useState(0);
 
   // mic/webcam state
@@ -70,12 +70,20 @@ export function MockInterviewSession() {
     let h;
     if (isActive) {
       h = setInterval(() => {
-        setTimeRemaining((t) => (t <= 1 ? 0 : t - 1));
+        setTimeRemaining((t) => {
+          if (t <= 1) {
+            clearInterval(h);
+            handleEndInterviewClick();
+            return 0;
+          }
+          return t - 1;
+        });
         setQuestionTime((q) => q + 1);
       }, 1000);
     }
     return () => clearInterval(h);
   }, [isActive]);
+
 
   useEffect(() => {
     if (isActive && currentQuestion) playQuestionVideo({ resetToStart: true, preferSound: true });
@@ -88,9 +96,21 @@ export function MockInterviewSession() {
 
   const handleStartInterview = async () => {
     try {
-      const pv = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      let pv = null;
+      try {
+        // Try both first
+        pv = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      } catch {
+        // Fallback: try only audio
+        pv = await navigator.mediaDevices.getUserMedia({ audio: true });
+        toast.message("No camera detected. Starting with audio only.");
+        setIsWebcamOn(false);
+      }
+
       previewStreamRef.current = pv;
-      if (webcamRef.current) webcamRef.current.srcObject = pv;
+      if (webcamRef.current && pv.getVideoTracks().length > 0) {
+        webcamRef.current.srcObject = pv;
+      }
 
       const audioOnly = new MediaStream(pv.getAudioTracks());
       audioRecordStreamRef.current = audioOnly;
@@ -101,7 +121,7 @@ export function MockInterviewSession() {
       await playQuestionVideo({ resetToStart: true, preferSound: true });
     } catch (err) {
       console.error(err);
-      toast.error('Allow camera & microphone to proceed.');
+      toast.error('Camera/microphone not available. Please enable and retry.');
     }
   };
 
@@ -371,8 +391,12 @@ export function MockInterviewSession() {
         {/* Controls */}
         <Card>
           <CardContent className="p-4 space-y-3">
-            <div className="grid grid-cols-3 gap-2 items-center">
-              <Button variant="outline" onClick={toggleWebcam} className={!isWebcamOn ? 'bg-red-100 text-red-800' : ''}>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-center">
+              <Button
+                variant="outline"
+                onClick={toggleWebcam}
+                className={`${!isWebcamOn ? 'bg-red-100 text-red-800' : ''} w-full text-sm`}
+              >
                 {isWebcamOn ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
               </Button>
 
@@ -380,7 +404,7 @@ export function MockInterviewSession() {
                 variant="default"
                 onClick={startRecording}
                 disabled={isRecording || transcribing}
-                className="bg-rose-600 hover:bg-rose-700 text-white"
+                className="w-full bg-rose-600 hover:bg-rose-700 text-white text-sm px-3"
                 title="Start Recording"
               >
                 <Mic className="h-4 w-4 mr-2" /> Start
@@ -390,25 +414,37 @@ export function MockInterviewSession() {
                 variant="secondary"
                 onClick={stopRecordingAndTranscribe}
                 disabled={!isRecording}
-                className="bg-gray-100"
+                className="w-full bg-gray-100 text-sm px-3 whitespace-normal"
                 title="Stop Recording and Transcribe"
               >
-                <MicOff className="h-4 w-4 mr-2" /> Stop & Transcribe
+                <MicOff className="h-4 w-4 mr-2" /> Stop Recording
               </Button>
 
-              <Button variant="outline" onClick={() => toggleQvMute()} className="col-span-1">
+              <Button
+                variant="outline"
+                onClick={() => toggleQvMute()}
+                className="w-full"
+              >
                 {qvMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
               </Button>
 
-              <div className="col-span-2 text-xs text-muted-foreground">
-                {transcribing ? "Transcribing…" : (isRecording ? "Recording in progress…" : "Tip: Record your answer, then stop to auto-transcribe.")}
+              <div className="col-span-2 sm:col-span-4 text-xs text-muted-foreground">
+                {transcribing
+                  ? "Transcribing…"
+                  : (isRecording ? "Recording in progress…" : "Tip: Record your answer, then stop to auto-transcribe.")
+                }
               </div>
             </div>
 
             {lastAudioUrl && !isRecording && (
               <div className="flex items-center justify-between rounded-md border p-2">
                 <audio src={lastAudioUrl} controls className="w-full mr-2" />
-                <a href={lastAudioUrl} download={`answer_${currentQuestionIndex + 1}.webm`} className="inline-flex" title="Download recording">
+                <a
+                  href={lastAudioUrl}
+                  download={`answer_${currentQuestionIndex + 1}.webm`}
+                  className="inline-flex"
+                  title="Download recording"
+                >
                   <Button variant="outline" size="sm">
                     <Download className="h-4 w-4 mr-1" /> Download
                   </Button>
@@ -417,6 +453,7 @@ export function MockInterviewSession() {
             )}
           </CardContent>
         </Card>
+
 
         {/* Timers */}
         <Card>
@@ -555,7 +592,8 @@ export function MockInterviewSession() {
       {/* Start Modal */}
       {showStartModal && (
         <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          {/* darker backdrop */}
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           <div className="absolute inset-0 flex items-center justify-center p-4">
             <Card className="w-full max-w-lg">
               <CardHeader>

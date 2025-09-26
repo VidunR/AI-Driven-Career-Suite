@@ -37,8 +37,8 @@ export function MockInterviewSetup() {
     'Software Engineer',
     'Cybersecurity Specialist',
     'Accountant',
-    'Digital Marketing Manger',
-    'Project Manger'
+    "Project Manager",
+    "Digital Marketer",
   ];
 
   const commonFocusAreas = [

@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, RefreshCw, Flag, CheckCircle2, XCircle } from "lucide-react";
+import axios from "axios";
 
-// --- Inline UI components (same as yours) ---
+// --- Inline UI components ---
 const Card = ({ className = "", children, ...props }) => (
   <div className={`rounded-lg border bg-card text-card-foreground shadow-sm ${className}`} {...props}>
     {children}
@@ -50,12 +51,11 @@ const Separator = ({ className = "", orientation = "horizontal", ...props }) => 
 );
 // --- /UI ---
 
-/** Maps DB result from GET /interviewresult/:id into the UI shape */
-/** Maps DB result from GET /interviewresult/:id into the UI shape */
+// Map DB -> UI
 function mapDbResultToUi(db) {
   if (!db) return null;
 
-  // If the server returns the saved model JSON, prefer it.
+  // If feedbackJson were present (Json column), you could prefer it here.
   const fx = db.feedbackJson && typeof db.feedbackJson === "object" ? db.feedbackJson : null;
 
   if (fx) {
@@ -75,7 +75,7 @@ function mapDbResultToUi(db) {
     };
   }
 
-  // Fallback if feedbackJson is missing: build from interviewAnalysis rows
+  // Fallback: build from analysis rows
   const jobRole = db?.interviewJobRole?.jobRoleName || "Role";
   const list = Array.isArray(db?.interviewAnalysis) ? db.interviewAnalysis : [];
 
@@ -117,7 +117,6 @@ function mapDbResultToUi(db) {
   };
 }
 
-
 const gradeBadge = (score) => {
   if (score >= 90) return { text: "Outstanding", cls: "bg-emerald-900/20 text-emerald-400 border-emerald-800" };
   if (score >= 80) return { text: "Excellent", cls: "bg-green-900/20 text-green-400 border-green-800" };
@@ -130,50 +129,57 @@ export function InterviewResults() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [data, setData] = useState(null);      // unified UI shape
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
+
   const incomingFeedback = location.state?.feedback;
   const interviewId = location.state?.interviewId;
 
-  // 1) If feedback is passed directly from evaluate → use it
-  // 2) Otherwise, if we only have interviewId (from History) → fetch DB results and map
   useEffect(() => {
-  let abort = false;
-  async function fetchFromDb(id) {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("jwtToken");
-      const r = await fetch(`http://localhost:5000/interviewresult/${id}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      const dbJson = await r.json();
-      if (abort) return;
+    let abort = false;
 
-      if (!r.ok) {
-        console.error("Fetch interview result failed:", dbJson);
+    async function fetchFromDb(id) {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem("jwtToken");
+
+        const r = await axios.get(`http://localhost:5000/interviewresults/${id}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+
+        if (abort) return;
+
+        // Axios: data is in r.data
+        setData(mapDbResultToUi(r.data));
+      } catch (e) {
+        if (abort) return;
+
+        // Handle 404 / other errors gracefully
+        const status = e?.response?.status;
+        if (status === 404) {
+          console.error("Interview results not found");
+        } else {
+          console.error("Fetch interview result error:", e);
+        }
         setData(null);
-        return;
+      } finally {
+        if (!abort) setLoading(false);
       }
-      setData(mapDbResultToUi(dbJson));
-    } catch (e) {
-      console.error("Fetch interview result error:", e);
-      if (!abort) setData(null);
-    } finally {
-      if (!abort) setLoading(false);
     }
-  }
 
-  if (incomingFeedback && typeof incomingFeedback === "object") {
-    setData(incomingFeedback);
-    return;
-  }
-  if (interviewId) {
-    fetchFromDb(interviewId);
-    return;
-  }
-  setData(null);
-}, [incomingFeedback, interviewId]);
+    // Prefer in-memory feedback (from evaluation flow)
+    if (incomingFeedback && typeof incomingFeedback === "object") {
+      setData(incomingFeedback);
+      return;
+    }
+    if (interviewId) {
+      fetchFromDb(interviewId);
+      return;
+    }
+    setData(null);
 
+    return () => { abort = true; };
+  }, [incomingFeedback, interviewId]);
 
   const role = data?.jobRole || "Role";
   const overall = data?.overall || {};

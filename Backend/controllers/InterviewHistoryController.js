@@ -7,6 +7,7 @@ export const getInterviewHistoryDetails = async (req, res) => {
   try {
     const interviewHistoryResults = await prisma.interview.findMany({
       where: { userId: parseInt(userID) },
+      orderBy: [{interviewDate: 'desc'}, {interviewId: 'desc'}],
       select: {
         interviewJobRole: {
           select: { jobRoleName: true },
@@ -34,3 +35,26 @@ export const getInterviewHistoryDetails = async (req, res) => {
     return res.status(500).json({ errorMessage: `An error occurred: ${err}` });
   }
 };
+
+// Delete: /interviewhistory
+
+export const deleteInterview = async(req, res) => {
+  const userID = req.user.userId;
+  const {interviewID} = req.body;
+
+  try{
+    const interviewDetails = await prisma.interview.delete({
+      where: {interviewId: parseInt(interviewID)}
+    });
+
+    res.status(200).json({
+      message: "Interview Deleted Successfully",
+      interviewDetails
+    });
+
+  }
+  catch(err){
+    return res.status(500).json({ errorMessage: `An error occurred: ${err}` });
+  }
+
+}

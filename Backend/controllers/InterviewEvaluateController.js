@@ -289,6 +289,9 @@ export const evaluateInterviewAndSaveRaw = async (req, res) => {
           const durationMinutes = Math.max(1, Math.round(totalSeconds / 60));
           const totalScore = Number(json?.overall?.totalScore) || 0;
 
+          // This can be adjusted as the number of questions per interview changers
+          const totalQuestionsLimit = 5;
+
           const interview = await prisma.interview.create({
             data: {
               userId: userIdNum,
@@ -296,10 +299,9 @@ export const evaluateInterviewAndSaveRaw = async (req, res) => {
               interviewDate: new Date(),
               interviewDuration: durationMinutes,
               interviewScore: totalScore,
-              completedPercentage: Math.round(totalScore),
+              completedPercentage: parseInt(((responses.length / totalQuestionsLimit) * 100).toFixed(0)),
               isCompleted: true,
               experienceLevel: String(difficulty || "mid"),
-              // feedbackJson: json  // ← removed to match your schema
             },
             select: { interviewId: true }
           });

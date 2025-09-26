@@ -238,8 +238,8 @@ model Interview {
 // Create InterviewAnalysis
 model InterviewAnalysis {
     analyticsId Int @id @default(autoincrement())
-    userAnswer String?
-    feedback String
+    userAnswer String? @db.LongText
+    feedback String @db.LongText
     scorePerQuestion Float @default(0.0)
 
     // FK setup interview
