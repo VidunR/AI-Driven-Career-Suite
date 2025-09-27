@@ -1,415 +1,343 @@
 import prisma from "../config/db.js";
 
-
-// Post: cvbuilder/saveCV
-export const saveCV = async(req, res) => {
-    const userID = req.user.userId;
-
-    const {cvFilepath, cvImagePath} = req.body;
-
-    try{
-        const cvResults = await prisma.cv.create({
-            data: {
-                cvFilepath: cvFilepath,
-                cvImagePath: cvImagePath,
-                modifiedDate: new Date(),
-                userId: parseInt(userID)
-            }
-        });
-
-        return res.status(200).json({
-            message: "CV is generated",
-            cvResults
-        });
-        
-    }
-    catch(err){
-        return res.status(500).json({errorMessage: `An error occured: ${err}`});
-    }
-}
-
-// Get: cvbuilder/user
-export const getUserDetails = async(req, res) => {
-    const userID = req.user.userId;
-
-    try{
-        const userDetails = await prisma.registeredUser.findUnique({
-            where: {userId: userID},
-            select: {
-                firstName:true,
-                lastName: true,
-                email: true,
-                phoneNumber: true,
-                country: true,
-                address: true,
-                linkedInURL: true,
-                bio: true
-            }
-        });
-
-        return res.status(200).json(userDetails);
-    }
-    catch(err){
-        return res.status(500).json({errorMessage: `An error occured: ${err}`});
-    }
-}
-
-// Get: cvbuilder/education
-export const getEducationDetails = async(req, res) => {
-    const userID = req.user.userId;
-
-    try{
-        const educationResults = await prisma.education.findMany({
-            where: {userId: parseInt(userID)}
-        });
-
-        if (educationResults.count === 0){
-            return res.status(404).json({message: "Resource not found."});   
-        }
-
-
-        return res.status(200).json(educationResults);   
-    }
-    catch(err){
-        return res.status(500).json({errorMessage: `An error occured: ${err}`});
-    }
-}
-
-// Post: cvbuilder/education
-export const createEducationDetails = async(req, res) => {
-    const userID = req.user.userId;
-    const {degree, institution, startDate, endDate} = req.body;
-
-    try{
-        const educationResults = await prisma.education.create({
-            data: {
-                userId: parseInt(userID),
-                degree: degree,
-                institution: institution,
-                startDate: new Date(startDate),
-                endDate: new Date(endDate)
-            }
-        });
-
-        return res.status(200).json(educationResults);   
-    }
-    catch(err){
-        return res.status(500).json({errorMessage: `An error occured: ${err}`});
-    }
-}
-
-// Delete: cvbuilder/education/{:educationID}
-export const deleteEducationDetails = async(req, res) => {
-    const userID = req.user.userId;
-    const {educationID} = req.params;
-
-    try{
-        const educationResults = await prisma.education.deleteMany({
-            where: {educationId: parseInt(educationID), userId: parseInt(userID)}
-        })
-
-        if (educationResults.count === 0){
-            return res.status(404).json({message: "Resource not found."});   
-        }
-
-        return res.status(200).json({message: "Education Details Successfully deleted."})
-    }
-    catch(err){
-        return res.status(500).json({errorMessage: `An error occured: ${err}`});
-    }
-}
-
-
-// Get: cvbuilder/experience
-export const getExperienceDetails = async(req, res) => {
-    const userID = req.user.userId;
-
-    try{
-        const experinceResults = await prisma.experience.findMany({
-            where: {userId: parseInt(userID)}
-        });
-
-        if (experinceResults.count === 0){
-            return res.status(404).json({message: "Resource not found."});   
-        }
-
-        return res.status(200).json(experinceResults);   
-    }
-    catch(err){
-        return res.status(500).json({errorMessage: `An error occured: ${err}`});
-    }
-}
-
-// Post: cvbuilder/experience
-export const createExperienceDetails = async(req, res) => {
-    const userID = req.user.userId;
-    const {jobTitle, company, startDate, endDate, description} = req.body;
-
-    try{
-        const experinceResults = await prisma.experience.create({
-            data: {
-                userId: parseInt(userID),
-                jobTitle: jobTitle,
-                company: company,
-                startDate: new Date(startDate),
-                endDate: new Date(endDate),
-                description: description
-            }
-        });
-
-        return res.status(200).json(experinceResults);   
-    }
-    catch(err){
-        return res.status(500).json({errorMessage: `An error occured: ${err}`});
-    }
-}
-
-// Delete: cvbuilder/education/{:experienceID}
-export const deleteExperienceDetails = async(req, res) => {
-    const {experienceID} = req.params;
-    const userID = req.user.userId;
-
-    try{
-        const experienceResults = await prisma.experience.deleteMany({
-            where: {experienceId: parseInt(experienceID), userId: parseInt(userID)}
-        });
-
-        if (experienceResults.count === 0){
-            return res.status(404).json({message: "Resource not found."});   
-        }
-
-        return res.status(200).json({message: "Experience Details Successfully deleted."})
-    }
-    catch(err){
-        return res.status(500).json({errorMessage: `An error occured: ${err}`});
-    }
-}
-
-// Get: cvbuilder/skills
-export const getSkillsDetails = async(req, res) => {
-    const userID = req.user.userId;
-
-    try{
-        const skillsResults = await prisma.userSkill.findMany({
-            where: {userId: parseInt(userID)},
-            select: {
-                skill:{
-                    select: {
-                        skillName: true
-                    }
-                }
-            }
-        });
-
-        if (skillsResults.count === 0){
-            return res.status(404).json({message: "Resource not found."});   
-        }
-
-        return res.status(200).json(skillsResults);   
-    }
-    catch(err){
-        return res.status(500).json({errorMessage: `An error occured: ${err}`});
-    }
-}
-
-// Post: cvbuilder/skills
-export const createSkillsDetails = async (req, res) => {
-  const userID = req.user.userId;
-  const { skillName } = req.body;
-
-  const correctSkillsName = skillName.trim()
-    .split(/\s+/)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
-
+/**
+ * POST /cvbuilder/saveCV
+ * Body: { cvFilepath?: string, cvImagePath?: string, cvName?: string }
+ * Persists a CV “record” for the logged-in user. File paths can be empty strings.
+ */
+export const saveCV = async (req, res) => {
   try {
-    // Find skill if it already exists
-    let skill = await prisma.skill.findFirst({
-      where: { skillName: correctSkillsName },
-    });
+    const userId = parseInt(req.user?.userId);
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    // If skill doesn't exist, create it
-    if (!skill) {
-      skill = await prisma.skill.create({
-        data: { skillName: correctSkillsName },
-      });
-    }
+    const relPath = `assets/CVs/${req.file.filename}`;
 
-    // Check if user already has this skill
-    const existingUserSkill = await prisma.userSkill.findFirst({
-      where: {
-        userId: userID,
-        skillId: skill.skillId,
-      },
-    });
+    const {
+      cvFilepath = relPath,     
+      cvImagePath = "",   
+      cvName = "CV",
+    } = req.body || {};
 
-    if (existingUserSkill) {
-      return res.status(400).json({ message: "User already has this skill." });
-    }
-
-    // Link user to skill
-    const userSkill = await prisma.userSkill.create({
+    const cvResults = await prisma.cv.create({
       data: {
-        user: { connect: { userId: userID } },
-        skill: { connect: { skillId: skill.skillId } },
+        cvFilepath,
+        cvImagePath,
+        cvName: cvName?.trim() || "CV",
+        modifiedDate: new Date(),
+        userId,
       },
     });
 
-    return res.status(201).json({
-      message: "Skill successfully added and linked to user.",
-      userSkill,
-    });
+    return res.status(200).json({ message: "CV is generated", cvResults });
   } catch (err) {
-    return res.status(500).json({
-      errorMessage: `An error occurred: ${err.message}`,
-    });
+    console.error("saveCV error:", err);
+    return res
+      .status(500)
+      .json({ errorMessage: `An error occured: ${err?.message || err}` });
   }
 };
 
+// GET /cvbuilder/user
+export const getUserDetails = async (req, res) => {
+  try {
+    const userId = parseInt(req.user?.userId);
+    const userDetails = await prisma.registeredUser.findUnique({
+      where: { userId },
+      select: {
+        firstName: true,
+        lastName: true,
+        email: true,
+        phoneNumber: true,
+        country: true,
+        address: true,
+        linkedInURL: true,
+        bio: true,
+      },
+    });
+    return res.status(200).json(userDetails);
+  } catch (err) {
+    return res.status(500).json({ errorMessage: `An error occured: ${err}` });
+  }
+};
 
-// Delete: cvbuilder/skills/{:skillID}
-export const deleteSkillDetails = async(req, res) => {
-    const {skillID} = req.params;
-    const userID = req.user.userId;
+// GET /cvbuilder/education
+export const getEducationDetails = async (req, res) => {
+  try {
+    const userId = parseInt(req.user?.userId);
+    const educationResults = await prisma.education.findMany({
+      where: { userId },
+    });
+    /*if (educationResults.length === 0) {
+      return res.status(404).json({ message: "Resource not found." });
+    }*/
+    return res.status(200).json(educationResults);
+  } catch (err) {
+    return res.status(500).json({ errorMessage: `An error occured: ${err}` });
+  }
+};
 
-    try{
-        const skillResults = await prisma.userSkill.deleteMany({
-            where: {skillId: parseInt(skillID), userId: parseInt(userID)}
-        })
+// POST /cvbuilder/education
+export const createEducationDetails = async (req, res) => {
+  try {
+    const userId = Number(req.user?.userId);
+    const { degree, institution, startDate, endDate } = req.body;
 
-        if (skillResults.count === 0){
-            return res.status(404).json({message: "Resource not found."});   
-        }
+    const educationResults = await prisma.education.create({
+      data: {
+        userId,
+        degree,
+        institution,
+        startDate: startDate ? new Date(startDate) : null,
+        endDate: endDate ? new Date(endDate) : null,
+      },
+    });
+    return res.status(200).json(educationResults);
+  } catch (err) {
+    return res.status(500).json({ errorMessage: `An error occured: ${err}` });
+  }
+};
 
-        return res.status(200).json({message: "Skill Successfully deleted."})
+// DELETE /cvbuilder/education/:educationID
+export const deleteEducationDetails = async (req, res) => {
+  try {
+    const userId = Number(req.user?.userId);
+    const educationID = Number(req.params.educationID);
+
+    const result = await prisma.education.deleteMany({
+      where: { educationId: educationID, userId },
+    });
+
+    if (result.count === 0) {
+      return res.status(404).json({ message: "Resource not found." });
     }
-    catch(err){
-        return res.status(500).json({errorMessage: `An error occured: ${err}`});
+    return res.status(200).json({ message: "Education Details Successfully deleted." });
+  } catch (err) {
+    return res.status(500).json({ errorMessage: `An error occured: ${err}` });
+  }
+};
+
+// GET /cvbuilder/experience
+export const getExperienceDetails = async (req, res) => {
+  try {
+    const userId = Number(req.user?.userId);
+    const experinceResults = await prisma.experience.findMany({ where: { userId } });
+    /*if (experinceResults.length === 0) {
+      return res.status(404).json({ message: "Resource not found." });
+    }*/
+    return res.status(200).json(experinceResults);
+  } catch (err) {
+    return res.status(500).json({ errorMessage: `An error occured: ${err}` });
+  }
+};
+
+// POST /cvbuilder/experience
+export const createExperienceDetails = async (req, res) => {
+  try {
+    const userId = Number(req.user?.userId);
+    const { jobTitle, company, startDate, endDate, description } = req.body;
+
+    const experinceResults = await prisma.experience.create({
+      data: {
+        userId,
+        jobTitle,
+        company,
+        startDate: startDate ? new Date(startDate) : null,
+        endDate: endDate ? new Date(endDate) : null,
+        description,
+      },
+    });
+    return res.status(200).json(experinceResults);
+  } catch (err) {
+    return res.status(500).json({ errorMessage: `An error occured: ${err}` });
+  }
+};
+
+// DELETE /cvbuilder/experience/:experienceID
+export const deleteExperienceDetails = async (req, res) => {
+  try {
+    const userId = Number(req.user?.userId);
+    const experienceID = Number(req.params.experienceID);
+
+    const result = await prisma.experience.deleteMany({
+      where: { experienceId: experienceID, userId },
+    });
+
+    if (result.count === 0) {
+      return res.status(404).json({ message: "Resource not found." });
     }
-}
+    return res.status(200).json({ message: "Experience Details Successfully deleted." });
+  } catch (err) {
+    return res.status(500).json({ errorMessage: `An error occured: ${err}` });
+  }
+};
 
-// Get: cvbuilder/achievement
-export const getAchievementDetails = async(req, res) => {
-    const userID = req.user.userId;
+// GET /cvbuilder/skills
+export const getSkillsDetails = async (req, res) => {
+  try {
+    const userId = Number(req.user?.userId);
+    const skillsResults = await prisma.userSkill.findMany({
+      where: { userId },
+      select: { skill: { select: { skillId: true, skillName: true } } },
+    });
+    /*if (skillsResults.length === 0) {
+      return res.status(404).json({ message: "Resource not found." });
+    }*/
 
-    try{
-        const achievementResults = await prisma.achievement.findMany({
-            where: {userId: parseInt(userID)}
-        });
+    const flatSkills = skillsResults.map((u) => u.skill); 
+    return res.status(200).json(flatSkills);
+  } catch (err) {
+    return res.status(500).json({ errorMessage: `An error occured: ${err}` });
+  }
+};
 
-        if (achievementResults.count === 0){
-            return res.status(404).json({message: "Resource not found."});   
-        }
+// POST /cvbuilder/skills
+export const createSkillsDetails = async (req, res) => {
+  try {
+    const userId = Number(req.user?.userId);
+    const { skillName } = req.body;
 
-        return res.status(200).json(achievementResults);   
+    const normalized = (skillName || "")
+      .trim()
+      .split(/\s+/)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(" ");
+
+    let skill = await prisma.skill.findFirst({ where: { skillName: normalized } });
+    if (!skill) skill = await prisma.skill.create({ data: { skillName: normalized } });
+
+    const existing = await prisma.userSkill.findFirst({
+      where: { userId, skillId: skill.skillId },
+    });
+    if (existing) return res.status(400).json({ message: "User already has this skill." });
+
+    const userSkill = await prisma.userSkill.create({
+      data: { userId, skillId: skill.skillId },
+    });
+
+    return res.status(201).json({ message: "Skill added.", userSkill });
+  } catch (err) {
+    return res.status(500).json({ errorMessage: `An error occurred: ${err?.message || err}` });
+  }
+};
+
+// DELETE /cvbuilder/skills/:skillID
+export const deleteSkillDetails = async (req, res) => {
+  try {
+    const userId = Number(req.user?.userId);
+    const skillID = Number(req.params.skillID);
+
+    const result = await prisma.userSkill.deleteMany({
+      where: { skillId: skillID, userId },
+    });
+
+    if (result.count === 0) {
+      return res.status(404).json({ message: "Resource not found." });
     }
-    catch(err){
-        return res.status(500).json({errorMessage: `An error occured: ${err}`});
+    return res.status(200).json({ message: "Skill Successfully deleted." });
+  } catch (err) {
+    return res.status(500).json({ errorMessage: `An error occured: ${err}` });
+  }
+};
+
+// GET /cvbuilder/achievement
+export const getAchievementDetails = async (req, res) => {
+  try {
+    const userId = Number(req.user?.userId);
+    const achievementResults = await prisma.achievement.findMany({ where: { userId } });
+    /*if (achievementResults.length === 0) {
+      return res.status(404).json({ message: "Resource not found." });
+    }*/
+    return res.status(200).json(achievementResults);
+  } catch (err) {
+    return res.status(500).json({ errorMessage: `An error occured: ${err}` });
+  }
+};
+
+// POST /cvbuilder/achievement
+export const createAchievementDetails = async (req, res) => {
+  try {
+    const userId = Number(req.user?.userId);
+    const { achievementTitle, achievementDescription } = req.body;
+
+    const achievementResults = await prisma.achievement.create({
+      data: { userId, achievementTitle, achievementDescription },
+    });
+    return res.status(200).json(achievementResults);
+  } catch (err) {
+    return res.status(500).json({ errorMessage: `An error occured: ${err}` });
+  }
+};
+
+// DELETE /cvbuilder/achievement/:achievementID
+export const deleteAchievementDetails = async (req, res) => {
+  try {
+    const userId = Number(req.user?.userId);
+    const achievementID = Number(req.params.achievementID);
+
+    const result = await prisma.achievement.deleteMany({
+      where: { achievementId: achievementID, userId },
+    });
+
+    if (result.count === 0) {
+      return res.status(404).json({ message: "Resource not found." });
     }
-}
+    return res.status(200).json({ message: "Achievement Successfully deleted." });
+  } catch (err) {
+    return res.status(500).json({ errorMessage: `An error occured: ${err}` });
+  }
+};
 
-// Post: cvbuilder/achievement
-export const createAchievementDetails = async(req, res) => {
-    const userID = req.user.userId;
-    const {achievementTitle, achievementDescription} = req.body;
+// GET /cvbuilder/project
+export const getProjectDetails = async (req, res) => {
+  try {
+    const userId = Number(req.user?.userId);
+    const projectResults = await prisma.project.findMany({ where: { userId } });
+    /*if (projectResults.length === 0) {
+      return res.status(404).json({ message: "Resource not found." });
+    }*/
+    return res.status(200).json(projectResults);
+  } catch (err) {
+    return res.status(500).json({ errorMessage: `An error occured: ${err}` });
+  }
+};
 
-    try{
-        const achievementResults = await prisma.achievement.create({
-            data: {
-                userId: parseInt(userID),
-                achievementTitle: achievementTitle,
-                achievementDescription: achievementDescription
-            }
-        });
+// POST /cvbuilder/project
+export const createProjectDetails = async (req, res) => {
+  try {
+    const userId = Number(req.user?.userId);
+    const { projectName, projectDesciption, startDate, endDate } = req.body;
 
-        return res.status(200).json(achievementResults);   
+    const project = await prisma.project.create({
+      data: {
+        userId,
+        projectName,
+        projectDescription: projectDesciption,
+        startDate: startDate ? new Date(startDate) : null,
+        endDate: endDate ? new Date(endDate) : null,
+      },
+    });
+
+    return res.status(200).json(project);
+  } catch (err) {
+    return res.status(500).json({ errorMessage: `An error occured: ${err}` });
+  }
+};
+
+// DELETE /cvbuilder/project/:projectID
+export const deleteProjectDetails = async (req, res) => {
+  try {
+    const userId = Number(req.user?.userId);
+    const projectID = Number(req.params.projectID);
+
+    const result = await prisma.project.deleteMany({
+      where: { projectId: projectID, userId },
+    });
+
+    if (result.count === 0) {
+      return res.status(404).json({ message: "Resource not found." });
     }
-    catch(err){
-        return res.status(500).json({errorMessage: `An error occured: ${err}`});
-    }
-}
-
-// Delete: cvbuilder/achievement/{:achievementID}
-export const deleteAchievementDetails = async(req, res) => {
-    const {achievementID} = req.params;
-    const userID = req.user.userId;
-
-    try{
-        const achievementResults = await prisma.achievement.deleteMany({
-            where: {achievementId: parseInt(achievementID), userId: parseInt(userID)}
-        })
-
-        if (achievementResults.count === 0){
-            return res.status(404).json({message: "Resource not found."});   
-        }
-
-        return res.status(200).json({message: "Achievement Successfully deleted."})
-    }
-    catch(err){
-        return res.status(500).json({errorMessage: `An error occured: ${err}`});
-    }
-}
-
-// Get: cvbuilder/project
-export const getProjectDetails = async(req, res) => {
-    const userID = req.user.userId;
-
-    try{
-        const projectResults = await prisma.project.findMany({
-            where: {userId: parseInt(userID)}
-        });
-
-        if (projectResults.count === 0){
-            return res.status(404).json({message: "Resource not found."});   
-        }
-
-        return res.status(200).json(projectResults);   
-    }
-    catch(err){
-        return res.status(500).json({errorMessage: `An error occured: ${err}`});
-    }
-}
-
-// Post: cvbuilder/project
-export const createProjectDetails = async(req, res) => {
-    const userID = req.user.userId;
-    const {projectName, projectDesciption, startDate, endDate} = req.body;
-
-    try{
-        const achievementResults = await prisma.project.create({
-            data: {
-                userId: parseInt(userID),
-                projectName: projectName,
-                projectDescription: projectDesciption,
-                startDate: startDate,
-                endDate: endDate
-            }
-        });
-
-        return res.status(200).json(achievementResults);   
-    }
-    catch(err){
-        return res.status(500).json({errorMessage: `An error occured: ${err}`});
-    }
-}
-
-// Delete: cvbuilder/project/{:projectID}
-export const deleteProjectDetails = async(req, res) => {
-    const {projectID} = req.params;
-    const userID = req.user.userId;
-
-    try{
-        const projectResults = await prisma.project.deleteMany({
-            where: {projectId: parseInt(projectID), userId: parseInt(userID)}
-        });
-
-        if (projectResults.count === 0){
-            return res.status(404).json({message: "Resource not found."});   
-        }
-
-        return res.status(200).json({message: "Project Successfully deleted."})
-    }
-    catch(err){
-        return res.status(500).json({errorMessage: `An error occured: ${err}`});
-    }
-}
+    return res.status(200).json({ message: "Project Successfully deleted." });
+  } catch (err) {
+    return res.status(500).json({ errorMessage: `An error occured: ${err}` });
+  }
+};

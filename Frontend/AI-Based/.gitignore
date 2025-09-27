@@ -39,3 +39,6 @@ coverage/
 .env
 .env.* 
 .secret
+
+# videos
+.mp4

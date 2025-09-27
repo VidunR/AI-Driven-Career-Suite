@@ -4,10 +4,7 @@ import { createInterviewResults, getInterviewResults } from "../controllers/Inte
 
 const router = Router();
 
-// Get: /interviewresult/{:interviewID}
-router.get('/{:interviewID}', authenticateToken, getInterviewResults);
-
-// Post: /interviewresult/{:interviewID}
-router.post('/{:interviewID}', authenticateToken, createInterviewResults);
+router.get('/:interviewID', authenticateToken, getInterviewResults);
+router.post('/:interviewID', authenticateToken, createInterviewResults);
 
 export default router;

@@ -24,6 +24,12 @@ const GoogleIcon = ({ className = "h-5 w-5" }) => (
   </svg>
 );
 
+const LinkedInIcon = ({ className = "h-5 w-5" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+  </svg>
+);
+
 export function LoginPage({ onLogin, onRegister, onBack }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -69,41 +75,57 @@ export function LoginPage({ onLogin, onRegister, onBack }) {
     }
   };
 
-  // Google login (client-only)
+  // Google login with backend integration
   const loginWithGoogle = useGoogleLogin({
-    flow: "implicit",
+    flow: "auth-code", // Changed from "implicit" to "auth-code"
     scope: "openid email profile",
-    onSuccess: async (tokenResponse) => {
+    onSuccess: async (codeResponse) => {
       try {
         setIsGoogleLoading(true);
-        const accessToken = tokenResponse.access_token;
-        if (!accessToken) throw new Error("No access token returned by Google");
+        setError("");
 
-        const r = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-          headers: { Authorization: `Bearer ${accessToken}` },
+        // Send the authorization code to your backend
+        const response = await axios.post("http://localhost:5000/auth/google", {
+          code: codeResponse.code
         });
-        if (!r.ok) throw new Error("Failed to fetch Google profile");
-        const profile = await r.json();
 
-        const user = {
-          id: profile.sub,
-          email: profile.email,
-          name: profile.name,
-          avatar_url: profile.picture,
-          provider: "google",
-        };
+        const { token, message } = response.data;
+        if (!token) throw new Error("Google login failed. No token returned.");
 
-        onLogin?.(user, accessToken);
+        // Store the JWT token from your backend
+        localStorage.setItem("jwtToken", token);
+
+        // Call onLogin callback
+        onLogin?.({ provider: "google" }, token);
+
         navigate("/dashboard", { replace: true });
       } catch (err) {
-        console.error(err);
-        setError("Google sign-in failed. Please try again.");
+        console.error("Google login error:", err);
+        setError(
+          err.response?.data?.error || "Google sign-in failed. Please try again."
+        );
       } finally {
         setIsGoogleLoading(false);
       }
     },
-    onError: () => setError("Google sign-in failed. Please try again."),
+    onError: (error) => {
+      console.error("Google login error:", error);
+      setError("Google sign-in failed. Please try again.");
+    },
   });
+
+  const linkedInLogin = () => {
+    const clientId = '86yjmxh0g4fzdk';
+    const redirectUri = encodeURIComponent(window.location.origin + '/auth/linkedin/callback');
+    // CORRECTED: Use OpenID Connect scopes
+    const scope = encodeURIComponent('openid profile email');
+    const state = Math.random().toString(36).substring(7);
+    
+    const linkedInAuthUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}`;
+   
+    sessionStorage.setItem('linkedin_state', state);
+    window.location.href = linkedInAuthUrl;
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -210,10 +232,11 @@ export function LoginPage({ onLogin, onRegister, onBack }) {
 
           <Button
             type="button"
-            onClick={() => alert("LinkedIn login coming soon...")}
+            onClick={linkedInLogin}
             disabled={isGoogleLoading || isLoading}
-            className="mt-3 w-full flex items-center justify-center gap-3 bg-primary text-white hover:opacity-90"
+            className="mt-3 w-full flex items-center justify-center gap-3 bg-[#0077B5] text-white hover:bg-[#005885]"
           >
+            <LinkedInIcon className="h-5 w-5" />
             <span>Continue with LinkedIn</span>
           </Button>
 

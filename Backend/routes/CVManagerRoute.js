@@ -1,13 +1,20 @@
 import { Router } from "express";
 import { authenticateToken } from "../middleware/AuthMiddleWare.js";
-import { deleteCV, getCVs } from "../controllers/CVManagerController.js";
+import { getCVs, deleteCV, uploadCV, getCVDetails } from "../controllers/CVManagerController.js";
+import { upload } from "../middleware/upload.js";
 
 const router = Router();
 
-// get all cvs
-router.get('', authenticateToken, getCVs);
+// list CVs for current user
+router.get("/", authenticateToken, getCVs);
 
-// Login user
-router.delete('/{:cvID}', authenticateToken, deleteCV);
+// show one cv
+router.get("/:cvID", authenticateToken, getCVDetails);
+
+// upload a CV file
+router.post("/upload", authenticateToken, upload.single("file"), uploadCV);
+
+// delete a CV
+router.delete("/:cvID", authenticateToken, deleteCV);
 
 export default router;

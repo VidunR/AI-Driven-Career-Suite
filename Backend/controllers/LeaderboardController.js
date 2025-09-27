@@ -7,7 +7,7 @@ export const getWeeklyRank = async (req, res) => {
     const userID = req.user.userId;
 
     try {
-        // Get the start of this week (Sunday 00:00 or Monday depending on convention).
+        // Get the start of this week
         const now = new Date();
         const startOfWeek = new Date(now);
         startOfWeek.setDate(now.getDate() - now.getDay());
@@ -29,9 +29,16 @@ export const getWeeklyRank = async (req, res) => {
                     interviewId: true,
                     interviewScore: true
                 }
+                },
+                settingsPreference: {
+                    select: {
+                        isanonymous: true
+                    }
                 }
             }
         });
+
+        console.log(weeklyResults);
 
         // Calculate average score and number of interviews
         let rankedUsers = weeklyResults.map(user => {
@@ -41,8 +48,8 @@ export const getWeeklyRank = async (req, res) => {
 
             return {
                 userId: user.userId,
-                firstName: user.firstName,
-                lastName: user.lastName,
+                firstName: !user.settingsPreference?.isanonymous ? user.firstName : "anonymous",
+                lastName: !user.settingsPreference?.isanonymous ? user.lastName : (Math.random() * 100000).toFixed(0) + user.userId,
                 numberOfInterviews: numInterviews,
                 avgScore
                 };
@@ -118,6 +125,11 @@ export const getMonthlyRank = async (req, res) => {
                         interviewId: true,
                         interviewScore: true
                     }
+                },
+                settingsPreference: {
+                    select: {
+                        isanonymous: true
+                    }
                 }
             }
         });
@@ -130,8 +142,8 @@ export const getMonthlyRank = async (req, res) => {
 
             return {
                 userId: user.userId,
-                firstName: user.firstName,
-                lastName: user.lastName,
+                firstName: !user.settingsPreference?.isanonymous ? user.firstName : "anonymous",
+                lastName: !user.settingsPreference?.isanonymous ? user.lastName : (Math.random() * 100000).toFixed(0) + user.userId,
                 numberOfInterviews: numInterviews,
                 avgScore
             };
@@ -196,6 +208,11 @@ export const getAllTimeRank = async (req, res) => {
                         interviewId: true,
                         interviewScore: true
                     }
+                },
+                settingsPreference: {
+                    select: {
+                        isanonymous: true
+                    }
                 }
             }
         });
@@ -208,8 +225,8 @@ export const getAllTimeRank = async (req, res) => {
 
             return {
                 userId: user.userId,
-                firstName: user.firstName,
-                lastName: user.lastName,
+                firstName: !user.settingsPreference?.isanonymous ? user.firstName : "anonymous",
+                lastName: !user.settingsPreference?.isanonymous ? user.lastName : (Math.random() * 100000).toFixed(0) + user.userId,
                 numberOfInterviews: numInterviews,
                 avgScore
             };

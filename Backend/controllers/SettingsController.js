@@ -1,4 +1,5 @@
 import prisma from "../config/db.js";
+import bcrypt from "bcrypt";
 
 // Used to get the preferenceId
 const gettingPreferenceId = async (userId) => {
@@ -99,7 +100,7 @@ export const getPreference = async (req, res) => {
 // Check if the settings exists if so use it, if not create a new settings
 export const saveSettings = async (req, res) => {
   const { emailNotification, pushNotification, interviewReminder, productUpdate,
-          publicProfileVisibility, shareProgress, language, soundEffect } = req.body;
+          publicProfileVisibility, isanonymous, language, soundEffect } = req.body;
 
   const userID = req.user.userId;
 
@@ -112,7 +113,7 @@ export const saveSettings = async (req, res) => {
         interviewReminder,
         productUpdate,
         publicProfileVisibility,
-        shareProgress,
+        isanonymous,
         language,
         soundEffect
       }
@@ -127,7 +128,7 @@ export const saveSettings = async (req, res) => {
           interviewReminder: interviewReminder,
           productUpdate: productUpdate,
           publicProfileVisibility: publicProfileVisibility,
-          shareProgress: shareProgress,
+          isanonymous: isanonymous,
           language: language,
           soundEffect: soundEffect
         }
@@ -192,23 +193,60 @@ export const deleteAccount = async (req, res) => {
 }
 
 
+// PUT: /settings/notifications
+export const updatePassword = async(req, res) => {
+    const userID = req.user.userId;
+    const {currentPassword, newPassword, confirmPassword} = req.body;
 
-
-
-
-
-
-
-// Post: /settings/notifications
-export const updateNotifictionsDetails = async(req, res) => {
-    const preferenceId = await gettingPreferenceId(userID);
+    const saltRounds = 10;
 
     try{
-        const preferenceId = await gettingPreferenceId(userID);
+        const userHashedPassword = await prisma.registeredUser.findUnique({
+            where: {userId: parseInt(userID)},
+            select: {
+                userId: true,
+                hashedPassword: true
+            }
+        });
 
+        // Password
+        const isCorrectPassword = await bcrypt.compare(currentPassword, userHashedPassword.hashedPassword);
+        if (!isCorrectPassword){
+            return res.status(400).json({message: "Current Password is Invalid"});
+        }
+
+        // Password must contain at least 8 characters, including uppercase, lowercase, number and special character
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+        if (!newPassword || !passwordRegex.test(newPassword)) {
+            return res.status(400).json({message: "Password must be at least 8 characters, include uppercase, lowercase, number, and special character."});
+        }
+
+        // Confirm Password
+        if (newPassword !== confirmPassword) {
+            return res.status(400).json({message: "Passwords do not match."});
+        }
+
+        // Password hashing
+        const newHashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+        // If same password
+        if (newPassword === currentPassword){
+            return res.status(400).json({message: "Use a new password"});
+        }
+
+        await prisma.registeredUser.update({
+            where: {userId: parseInt(userID)},
+            data: {
+                hashedPassword: newHashedPassword
+            }
+        });
+
+        return res.status(200).json({
+            message: "Password Updated",
+        });
+        
     }
     catch(err){
         return res.status(500).json({errorMessage: `An error occured: ${err}`});
     }
-
 }

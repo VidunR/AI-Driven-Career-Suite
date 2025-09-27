@@ -10,19 +10,29 @@ import { Separator } from './ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Bell, Shield, User, Globe, Trash2, Download, AlertTriangle, Key } from 'lucide-react';
 import { toast } from 'sonner';
+import { useNavigate } from "react-router-dom";
 
 // Simple confirmation modal component
-const ConfirmDialog = ({ open, onClose, onConfirm, title, description, confirmText = "Confirm", cancelText = "Cancel", variant = "destructive" }) => {
+const ConfirmDialog = ({
+  open,
+  onClose,
+  onConfirm,
+  title,
+  description,
+  confirmText = "Confirm",
+  cancelText = "Cancel",
+  variant = "destructive",
+}) => {
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm" 
+      <div
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       />
-      
+
       {/* Modal */}
       <div className="relative bg-background dark:bg-gray-900 text-white rounded-lg shadow-lg border border-gray-700 max-w-md w-full mx-4 p-6">
         <div className="flex items-center gap-2 mb-4">
@@ -31,11 +41,11 @@ const ConfirmDialog = ({ open, onClose, onConfirm, title, description, confirmTe
             {title}
           </h2>
         </div>
-        
+
         <p className="text-gray-600 dark:text-gray-300 mb-4">
           {description}
         </p>
-        
+
         <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-md border border-red-200 dark:border-red-800 mb-6">
           <p className="text-sm text-red-800 dark:text-red-300 font-medium">
             ⚠️ This action is irreversible
@@ -44,13 +54,13 @@ const ConfirmDialog = ({ open, onClose, onConfirm, title, description, confirmTe
             Once deleted, your account and all associated data will be permanently removed from our servers.
           </p>
         </div>
-        
+
         <div className="flex gap-2 justify-end">
           <Button variant="outline" onClick={onClose}>
             {cancelText}
           </Button>
-          <Button 
-            variant={variant} 
+          <Button
+            variant={variant}
             onClick={() => {
               onConfirm();
               onClose();
@@ -65,30 +75,88 @@ const ConfirmDialog = ({ open, onClose, onConfirm, title, description, confirmTe
   );
 };
 
-// Change Password modal component
+// Change Password modal component (fixed hooks order + real-time validation)
 const PasswordDialog = ({ open, onClose, onSubmit }) => {
+  // Hooks must always run in the same order, regardless of `open`
   const [form, setForm] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
+  const [errors, setErrors] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (!open) return null;
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+
+  const validate = (f) => {
+    const e = { currentPassword: "", newPassword: "", confirmPassword: "" };
+
+    if (!f.currentPassword) {
+      e.currentPassword = "Current password is required.";
+    }
+
+    if (!f.newPassword) {
+      e.newPassword = "New password is required.";
+    } else if (!passwordRegex.test(f.newPassword)) {
+      e.newPassword =
+        "Must be 8+ chars and include uppercase, lowercase, number, and special character.";
+    } else if (f.newPassword === f.currentPassword) {
+      e.newPassword = "Use a different password than the current one.";
+    }
+
+    if (!f.confirmPassword) {
+      e.confirmPassword = "Please re-enter the new password.";
+    } else if (f.confirmPassword !== f.newPassword) {
+      e.confirmPassword = "Passwords do not match.";
+    }
+
+    return e;
+  };
+
+  // Real-time validation
+  useEffect(() => {
+    setErrors(validate(form));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.currentPassword, form.newPassword, form.confirmPassword]);
+
+  // Optional: reset fields when dialog opens
+  useEffect(() => {
+    if (open) {
+      setForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setErrors({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    }
+  }, [open]);
+
+  const hasErrors = !!(errors.currentPassword || errors.newPassword || errors.confirmPassword);
 
   const handleSubmit = async () => {
-    if (!form.currentPassword || !form.newPassword || !form.confirmPassword) {
-      toast.error("Please fill in all fields");
+    const e = validate(form);
+    setErrors(e);
+    if (e.currentPassword || e.newPassword || e.confirmPassword) {
+      toast.error("Fix validation errors before submitting");
       return;
     }
-    if (form.newPassword !== form.confirmPassword) {
-      toast.error("New passwords do not match");
-      return;
+
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        currentPassword: form.currentPassword,
+        newPassword: form.newPassword,
+        confirmPassword: form.confirmPassword,
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    await onSubmit({
-      currentPassword: form.currentPassword,
-      newPassword: form.newPassword,
-    });
   };
+
+  const inputErrorClass = "border-red-500 focus-visible:ring-red-500";
+
+  // Now it's safe to conditionally render after hooks have run
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -115,7 +183,12 @@ const PasswordDialog = ({ open, onClose, onSubmit }) => {
               onChange={(e) =>
                 setForm((f) => ({ ...f, currentPassword: e.target.value }))
               }
+              aria-invalid={!!errors.currentPassword}
+              className={errors.currentPassword ? inputErrorClass : ""}
             />
+            {errors.currentPassword && (
+              <p className="text-xs text-red-500 mt-1">{errors.currentPassword}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -127,7 +200,15 @@ const PasswordDialog = ({ open, onClose, onSubmit }) => {
               onChange={(e) =>
                 setForm((f) => ({ ...f, newPassword: e.target.value }))
               }
+              aria-invalid={!!errors.newPassword}
+              className={errors.newPassword ? inputErrorClass : ""}
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Must be 8+ chars with uppercase, lowercase, number, and special character.
+            </p>
+            {errors.newPassword && (
+              <p className="text-xs text-red-500 mt-1">{errors.newPassword}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -139,16 +220,21 @@ const PasswordDialog = ({ open, onClose, onSubmit }) => {
               onChange={(e) =>
                 setForm((f) => ({ ...f, confirmPassword: e.target.value }))
               }
+              aria-invalid={!!errors.confirmPassword}
+              className={errors.confirmPassword ? inputErrorClass : ""}
             />
+            {errors.confirmPassword && (
+              <p className="text-xs text-red-500 mt-1">{errors.confirmPassword}</p>
+            )}
           </div>
 
           <div className="flex gap-2 justify-end pt-2">
             <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit}>
+            <Button onClick={handleSubmit} disabled={isSubmitting || hasErrors}>
               <Key className="h-4 w-4 mr-2" />
-              Update Password
+              {isSubmitting ? "Updating..." : "Update Password"}
             </Button>
           </div>
         </div>
@@ -159,10 +245,13 @@ const PasswordDialog = ({ open, onClose, onSubmit }) => {
 
 export function Settings({ user, onNavigate }) {
   const token = localStorage.getItem("jwtToken");
+  const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState("notifications");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
   const [settings, setSettings] = useState({
     notifications: {
       email: false,
@@ -171,7 +260,7 @@ export function Settings({ user, onNavigate }) {
       updates: false,
     },
     privacy: {
-      profileVisibility: "private", 
+      profileVisibility: "private",
       shareProgress: true,
       anonymousMode: false,
     },
@@ -181,9 +270,10 @@ export function Settings({ user, onNavigate }) {
       theme: "dark",
       soundEffects: true,
     },
+    account: {
+      email: "",
+    },
   });
-
-  const [accountData, setAccountData] = useState(null);
 
   // Fetch settings when tab changes
   useEffect(() => {
@@ -226,10 +316,10 @@ export function Settings({ user, onNavigate }) {
           setSettings((prev) => ({
             ...prev,
             notifications: {
-              email: data.emailNotification,
-              push: data.pushNotification,
-              interviews: data.interviewReminder,
-              updates: data.productUpdate,
+              email: !!data.emailNotification,
+              push: !!data.pushNotification,
+              interviews: !!data.interviewReminder,
+              updates: !!data.productUpdate,
             },
           }));
         }
@@ -238,8 +328,9 @@ export function Settings({ user, onNavigate }) {
           setSettings((prev) => ({
             ...prev,
             privacy: {
+              ...prev.privacy,
               profileVisibility: data.publicProfileVisibility ? "public" : "private",
-              anonymousMode: data.isanonymous,
+              anonymousMode: !!data.isanonymous,
             },
           }));
         }
@@ -249,8 +340,8 @@ export function Settings({ user, onNavigate }) {
             ...prev,
             preferences: {
               ...prev.preferences,
-              language: data.language?.toLowerCase() || "english",
-              soundEffects: data.soundEffect,
+              language: (data.language || "English").toLowerCase(),
+              soundEffects: !!data.soundEffect,
             },
           }));
         }
@@ -263,39 +354,102 @@ export function Settings({ user, onNavigate }) {
     fetchData();
   }, [activeTab, token]);
 
-  const handleSave = () => {
-    toast.success("Settings saved successfully");
+  const capitalize = (s) =>
+    typeof s === "string" && s.length
+      ? s.charAt(0).toUpperCase() + s.slice(1)
+      : s;
+
+  const handleSave = async () => {
+    if (!token) {
+      toast.error("User not authenticated");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Map UI state -> API payload
+      const payload = {
+        emailNotification: !!settings.notifications.email,
+        pushNotification: !!settings.notifications.push,
+        interviewReminder: !!settings.notifications.interviews,
+        productUpdate: !!settings.notifications.updates,
+        publicProfileVisibility: settings.privacy.profileVisibility === "public",
+        isanonymous: !!settings.privacy.anonymousMode,
+        language: capitalize(settings.preferences.language || "English"),
+        soundEffect: !!settings.preferences.soundEffects,
+      };
+
+      await axios.post(
+        "http://localhost:5000/settings/update",
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      toast.success("Settings saved successfully");
+    } catch (err) {
+      console.error("Error saving settings:", err);
+      const msg = err?.response?.data?.message || "Failed to save settings";
+      toast.error(msg);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const exportData = () => {
     toast.success("Data export started. You will receive an email when ready.");
   };
 
-  const handleDeleteAccount = () => {
-    // Here you would make the API call to delete the account
-    toast.error("Account deletion requested. Please contact support to confirm.");
+ const handleDeleteAccount = async () => {
+    if (!token) {
+      toast.error("User not authenticated");
+      return;
+    }
+
+    try {
+      await axios.delete("http://localhost:5000/settings/account", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      toast.success("Account deleted successfully");
+
+      // Clear local data
+      localStorage.removeItem("jwtToken");
+      localStorage.removeItem("user");
+
+      // Navigate to login screen
+      navigate("/login", { replace: true });
+    } catch (err) {
+      console.error("Error when deleting account:", err);
+      const msg = err?.response?.data?.message || "Failed to delete account";
+      toast.error(msg);
+    }
   };
 
   const openChangePassword = () => {
     setIsPasswordDialogOpen(true);
   };
 
-  const handlePasswordChange = async ({ currentPassword, newPassword }) => {
+  // Calls POST /settings/updatepassword with confirmPassword; shows backend message on success
+  const handlePasswordChange = async ({ currentPassword, newPassword, confirmPassword }) => {
     if (!token) {
       toast.error("User not authenticated");
       return;
     }
     try {
-      await axios.post(
-        "http://localhost:5000/settings/change-password",
-        { currentPassword, newPassword },
+      const res = await axios.put(
+        "http://localhost:5000/settings/updatepassword",
+        { currentPassword, newPassword, confirmPassword },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast.success("Password changed successfully");
+      const msg = res?.data?.message || "Password Updated";
+      toast.success(msg);
       setIsPasswordDialogOpen(false);
     } catch (err) {
       console.error("Error changing password:", err);
-      const msg = err?.response?.data?.message || "Failed to change password";
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.errorMessage ||
+        "Failed to change password";
       toast.error(msg);
     }
   };
@@ -536,8 +690,8 @@ export function Settings({ user, onNavigate }) {
                 <Separator />
                 <div className="space-y-4">
                   <h4 className="font-medium text-red-600">Danger Zone</h4>
-                  <Button 
-                    variant="destructive" 
+                  <Button
+                    variant="destructive"
                     onClick={() => setIsDeleteDialogOpen(true)}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
@@ -551,7 +705,9 @@ export function Settings({ user, onNavigate }) {
       </Tabs>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave}>Save All Changes</Button>
+        <Button onClick={handleSave} disabled={isSaving}>
+          {isSaving ? "Saving..." : "Save All Changes"}
+        </Button>
       </div>
 
       {/* Custom Confirmation Dialog */}

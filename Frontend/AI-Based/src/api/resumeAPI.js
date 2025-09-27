@@ -1,140 +1,52 @@
-const API_BASE_URL = 'http://localhost:5001/api';
+const API_BASE_URL = 'http://localhost:5000';
+
+function authHeaders() {
+  const token = localStorage.getItem('jwtToken');
+  return {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 
 class ResumeAPI {
-  constructor(userId = 'default-user') {
-    this.userId = userId;
-    this.headers = {
-      'Content-Type': 'application/json',
-    };
+  async saveResume({ cvFilepath, cvImagePath = "", cvName = "CV" }) {
+    const res = await fetch(`${API_BASE_URL}/cvbuilder/saveCV`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ cvFilepath, cvImagePath, cvName }),
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    return await res.json();
   }
 
-  // Create or update resume
-  async saveResume(resumeData) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/resumes`, {
-        method: 'POST',
-        headers: this.headers,
-        body: JSON.stringify({
-          ...resumeData,
-          userId: this.userId
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      return result.data;
-    } catch (error) {
-      console.error('Error saving resume:', error);
-      throw error;
-    }
-  }
-
-  // Get user's resumes
   async getResumes() {
-    try {
-      const response = await fetch(`${API_BASE_URL}/resumes?userId=${this.userId}`, {
-        method: 'GET',
-        headers: this.headers,
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      return result.data || [];
-    } catch (error) {
-      console.error('Error fetching resumes:', error);
-      throw error;
-    }
+    const res = await fetch(`${API_BASE_URL}/cvmanager`, {
+      headers: { ...authHeaders() },
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    return await res.json();
   }
 
-  // Get specific resume by ID
-  async getResume(resumeId) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/resumes/${resumeId}`, {
-        method: 'GET',
-        headers: this.headers,
-      });
+  async uploadFile(file, cvName = "") {
+    const fd = new FormData();
+    fd.append("file", file);
+    if (cvName) fd.append("cvName", cvName);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      return result.data;
-    } catch (error) {
-      console.error('Error fetching resume:', error);
-      throw error;
-    }
+    const res = await fetch(`${API_BASE_URL}/cvmanager/upload`, {
+      method: "POST",
+      headers: { ...authHeaders() }, // leave out Content-Type so browser sets multipart
+      body: fd,
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    return await res.json(); // returns created CV row
   }
 
-  // Generate PDF
-  async generatePDF(resumeId) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/resumes/${resumeId}/pdf`, {
-        method: 'GET',
-        headers: this.headers,
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.blob();
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      throw error;
-    }
-  }
-
-  // AI-powered content generation
-  async generateAIContent(prompt, section) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/ai/generate`, {
-        method: 'POST',
-        headers: this.headers,
-        body: JSON.stringify({
-          prompt,
-          section,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error generating AI content:', error);
-      throw error;
-    }
-  }
-
-  // Improve existing text with AI
-  async improveText(text, context = '') {
-    try {
-      const response = await fetch(`${API_BASE_URL}/ai/improve`, {
-        method: 'POST',
-        headers: this.headers,
-        body: JSON.stringify({
-          text,
-          context,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error improving text:', error);
-      throw error;
-    }
+  async deleteCV(cvId) {
+    const res = await fetch(`${API_BASE_URL}/cvmanager/${cvId}`, {
+      method: "DELETE",
+      headers: { ...authHeaders() },
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    return await res.json();
   }
 }
 
