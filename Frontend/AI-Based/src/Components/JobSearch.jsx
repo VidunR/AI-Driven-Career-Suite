@@ -416,7 +416,7 @@ export default function JobSearch({ user, accessToken }) {
         </div>
       </aside>
 
-      {/* Main area */}
+      {/* Main  */}
       <main className="flex-1 min-w-0 grid grid-cols-1 lg:grid-cols-2">
         {/* List column */}
         <section className="min-h-0 overflow-y-auto border-r border-border">
