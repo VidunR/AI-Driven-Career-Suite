@@ -1,65 +1,56 @@
 import { Router } from "express";
-import { createAchievementDetails, createEducationDetails, createExperienceDetails, createProjectDetails, createSkillsDetails, deleteAchievementDetails, deleteEducationDetails, deleteExperienceDetails, deleteProjectDetails, deleteSkillDetails, getAchievementDetails, getEducationDetails, getExperienceDetails, getProjectDetails, getSkillsDetails, getUserDetails, saveCV } from "../controllers/CvBuilderController.js";
+import {
+  saveCV,
+  getUserDetails,
+  getEducationDetails,
+  createEducationDetails,
+  deleteEducationDetails,
+  getExperienceDetails,
+  createExperienceDetails,
+  deleteExperienceDetails,
+  getSkillsDetails,
+  createSkillsDetails,
+  deleteSkillDetails,
+  getAchievementDetails,
+  createAchievementDetails,
+  deleteAchievementDetails,
+  getProjectDetails,
+  createProjectDetails,
+  deleteProjectDetails,
+} from "../controllers/CvBuilderController.js";
 import { authenticateToken } from "../middleware/AuthMiddleWare.js";
 
 const router = Router();
 
 // Save generated CV
-router.post('/saveCV', authenticateToken, saveCV);
+router.post("/saveCV", authenticateToken, saveCV);
 
-// Personal Details
-// GET:
-router.get('/user', authenticateToken, getUserDetails);
+// Personal
+router.get("/user", authenticateToken, getUserDetails);
 
 // Education
-// GET:
-router.get('/education', authenticateToken, getEducationDetails);
-
-// POST:
-router.post('/education', authenticateToken, createEducationDetails);
-
-// Delete:
-router.delete('/education/{:educationID}', authenticateToken, deleteEducationDetails);
+router.get("/education", authenticateToken, getEducationDetails);
+router.post("/education", authenticateToken, createEducationDetails);
+router.delete("/education/:educationID", authenticateToken, deleteEducationDetails);
 
 // Experience
-// GET
-router.get('/experience', authenticateToken, getExperienceDetails);
-
-// POST:
-router.post('/experience', authenticateToken, createExperienceDetails);
-
-// Delete:
-router.delete('/experience/{:experienceID}', authenticateToken, deleteExperienceDetails);
+router.get("/experience", authenticateToken, getExperienceDetails);
+router.post("/experience", authenticateToken, createExperienceDetails);
+router.delete("/experience/:experienceID", authenticateToken, deleteExperienceDetails);
 
 // Skills
-// GET
-router.get('/skills', authenticateToken, getSkillsDetails);
+router.get("/skills", authenticateToken, getSkillsDetails);
+router.post("/skills", authenticateToken, createSkillsDetails);
+router.delete("/skills/:skillID", authenticateToken, deleteSkillDetails);
 
-// POST
-router.post('/skills', authenticateToken, createSkillsDetails);
-
-// DELETE
-router.delete('/skills/{:skillID}', authenticateToken, deleteSkillDetails);
-
-// Achievements
-// GET
-router.get('/achievement', authenticateToken, getAchievementDetails);
-
-// POST:
-router.post('/achievement', authenticateToken, createAchievementDetails);
-
-// Delete:
-router.delete('/achievement/{:achievementID}', authenticateToken, deleteAchievementDetails);
+// Achievement
+router.get("/achievement", authenticateToken, getAchievementDetails);
+router.post("/achievement", authenticateToken, createAchievementDetails);
+router.delete("/achievement/:achievementID", authenticateToken, deleteAchievementDetails);
 
 // Project
-// GET:
-router.get('/project', authenticateToken, getProjectDetails);
-
-// POST:
-router.post('/project', authenticateToken, createProjectDetails);
-
-// Delete:
-router.delete('/project/{:projectID}', authenticateToken, deleteProjectDetails);
-
+router.get("/project", authenticateToken, getProjectDetails);
+router.post("/project", authenticateToken, createProjectDetails);
+router.delete("/project/:projectID", authenticateToken, deleteProjectDetails);
 
 export default router;

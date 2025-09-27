@@ -13,7 +13,7 @@ export function Leaderboard({ user }) {
   const [timeframe, setTimeframe] = useState("monthly");
   const navigate = useNavigate();
 
-  // ✅ Fetch leaderboard from backend based on timeframe
+  // Fetch leaderboard from backend based on timeframe
   const fetchLeaderboard = async (tf) => {
     setIsLoading(true);
     const token = localStorage.getItem("jwtToken");

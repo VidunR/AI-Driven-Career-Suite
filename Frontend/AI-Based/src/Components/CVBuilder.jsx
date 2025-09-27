@@ -95,7 +95,7 @@ class AIEnhancementService {
 
       const prompt =
         prompts[type] ||
-                        `
+        `
                         Enhance the following text to sound professional and concise.
                         Rules:
                         - Preserve meaning; do NOT invent facts or metrics.
@@ -151,7 +151,7 @@ class AIEnhancementService {
 
       const prompt =
         prompts[type] ||
-                        `
+        `
                           Generate concise, professional resume content for "${type}".
                           Rules:
                           - Use action verbs; no invented facts or metrics.
@@ -167,8 +167,6 @@ class AIEnhancementService {
   }
 }
 
-
-
 // AI Enhancement Button Component
 function AIEnhanceButton({ onEnhance, isLoading, disabled, size = "sm", variant = "outline" }) {
   return (
@@ -179,7 +177,7 @@ function AIEnhanceButton({ onEnhance, isLoading, disabled, size = "sm", variant 
   );
 }
 
-// PDF Generation Utility 
+// PDF Generation Utility
 class CVDownloader {
   static generatePDF(cvData, theme, filename = "resume.pdf") {
     const element = document.createElement("div");
@@ -309,9 +307,7 @@ class CVDownloader {
                       ${edu.location ? `<p style="font-size:0.875rem;color:${C.subtleText};margin:0;">${edu.location}</p>` : ""}
                       ${edu.gpa ? `<p style="font-size:0.875rem;color:${C.subtleText};margin:0;">GPA: ${edu.gpa}</p>` : ""}
                     </div>
-                    <div style="font-size:0.875rem;color:${C.subtleText};text-align:right;">📅 ${edu.startDate || ""} - ${
-                edu.endDate || ""
-              }</div>
+                    <div style="font-size:0.875rem;color:${C.subtleText};text-align:right;">📅 ${edu.startDate || ""} - ${edu.endDate || ""}</div>
                   </div>
                   ${
                     edu.description
@@ -451,6 +447,7 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
     experience: [
       {
         id: 1,
+        apiId: undefined, // server id if present
         jobTitle: "",
         company: "",
         location: "",
@@ -463,6 +460,7 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
     education: [
       {
         id: 1,
+        apiId: undefined,
         degree: "",
         institution: "",
         location: "",
@@ -476,6 +474,7 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
     achievements: [
       {
         id: 1,
+        apiId: undefined,
         title: "",
         description: "",
         date: "",
@@ -484,6 +483,7 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
     projects: [
       {
         id: 1,
+        apiId: undefined,
         name: "",
         link: "",
         description: "",
@@ -497,6 +497,7 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
   const [theme, setTheme] = useState(resolveTheme(DEFAULT_THEME_ID));
 
   const [newSkill, setNewSkill] = useState("");
+  const [skillsIdMap, setSkillsIdMap] = useState({});
   const [activeTab, setActiveTab] = useState("personal");
   const [showPreview, setShowPreview] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -504,38 +505,222 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
   const [aiLoading, setAiLoading] = useState({});
   const resumeAPI = new ResumeAPI(user?.id || "default-user");
 
+  // ---- API helpers ----
+  const API_BASE = "http://localhost:5000/cvbuilder";
+
+  const getStoredToken = () => {
+    const keys = ["jwtToken", "token", "accessToken", "authToken"];
+    let t = null;
+    for (const k of keys) {
+      const v = localStorage.getItem(k);
+      if (v) {
+        t = v;
+        break;
+      }
+    }
+    if (!t && accessToken) t = accessToken;
+    return t || "";
+  };
+
+  const api = axios.create({ baseURL: API_BASE });
+
+  api.interceptors.request.use((config) => {
+    const token = getStoredToken();
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = token.startsWith("Bearer ")
+        ? token
+        : `Bearer ${token}`;
+    }
+    return config;
+  });
+
+  const safeArray = (d) =>
+    Array.isArray(d)
+      ? d
+      : Array.isArray(d?.data)
+      ? d.data
+      : Array.isArray(d?.result)
+      ? d.result
+      : Array.isArray(d?.items)
+      ? d.items
+      : [];
+
   useEffect(() => {
     loadSavedCV();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const toInputDate = (iso) => {
+    if (!iso) return "";
+    const parts = String(iso).split("T")[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(parts)) return parts;
+    const d = new Date(iso);
+    if (isNaN(d)) return "";
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const mapPersonal = (u = {}) => {
+    const root = u?.data && typeof u.data === "object" ? u.data : u;
+    const address = root?.address || "";
+    const country = root?.country || "";
+    const location = [address, country].filter(Boolean).join(", ");
+    return {
+      firstName: root?.firstName || "",
+      lastName: root?.lastName || "",
+      email: root?.email || "",
+      phone: root?.phoneNumber || "",
+      location,
+      linkedin: root?.linkedInURL || "",
+      website: "",
+      summary: root?.bio || "",
+    };
+  };
+
+  const mapExperience = (arr = []) =>
+    arr.map((e) => ({
+      id: e.experienceId ?? e.id ?? Math.random(),
+      apiId: e.experienceId ?? e.id,
+      jobTitle: e.jobTitle || "",
+      company: e.company || "",
+      location: e.location || "",
+      startDate: toInputDate(e.startDate),
+      endDate: toInputDate(e.endDate),
+      current: !e.endDate,
+      description: e.description || "",
+    }));
+
+  const mapEducation = (arr = []) =>
+    arr.map((e) => ({
+      id: e.educationId ?? e.id ?? Math.random(),
+      apiId: e.educationId ?? e.id,
+      degree: e.degree || "",
+      institution: e.institution || "",
+      location: e.location || "",
+      startDate: toInputDate(e.startDate),
+      endDate: toInputDate(e.endDate),
+      gpa: e.gpa || "",
+      description: e.description || "",
+    }));
+
+  const mapProjects = (arr = []) =>
+    arr.map((p) => ({
+      id: p.projectId ?? p.id ?? Math.random(),
+      apiId: p.projectId ?? p.id,
+      name: p.projectName || "",
+      link: p.githublink || p.githubLink || p.link || "",
+      description: p.projectDescription || p.description || "",
+      startDate: toInputDate(p.startDate),
+      endDate: toInputDate(p.endDate),
+      current: !p.endDate,
+    }));
+
+  const extractSkillId = (raw) =>
+    raw?.skillId ??
+    raw?.id ??
+    raw?.skillID ??
+    raw?.skill?.skillId ??
+    raw?.skill?.id;
+
+  const mapSkillsList = (arr = []) =>
+    arr
+      .map((s) => s?.skill?.skillName || s?.skillName || s?.name || s?.title || "")
+      .filter(Boolean);
+
+  const mapSkillsIdMap = (arr = []) =>
+    arr.reduce((acc, item) => {
+      const name =
+        item?.skill?.skillName || item?.skillName || item?.name || item?.title;
+      const id = extractSkillId(item);
+      if (name && id) acc[name] = id;
+      return acc;
+    }, {});
+
+  const mapAchievements = (arr = []) =>
+    arr.map((a) => ({
+      id: a.achievementId ?? a.id ?? Math.random(),
+      apiId: a.achievementId ?? a.id,
+      title: a.achievementTitle || a.title || "",
+      description: a.achievementDescription || a.description || "",
+      date: a.date ? toInputDate(a.date) : "",
+    }));
+
+  // FIX: fetch each endpoint independently so one failure doesn't block others
   const loadSavedCV = async () => {
     setIsLoading(true);
     try {
-      const savedResumes = await resumeAPI.getResumes();
-      if (savedResumes && savedResumes.length > 0) {
-        const latestResume = savedResumes[0];
-        setCvData({
-          personalInfo: latestResume.personalInfo || cvData.personalInfo,
-          experience: latestResume.experience || cvData.experience,
-          education: latestResume.education || cvData.education,
-          skills: latestResume.skills || cvData.skills,
-          achievements: latestResume.achievements || cvData.achievements,
-          projects: latestResume.projects || cvData.projects,
-        });
-      }
+      const [
+        userRes,
+        eduRes,
+        expRes,
+        projRes,
+        skillsRes,
+        achRes,
+      ] = await Promise.allSettled([
+        api.get(`/user`),
+        api.get(`/education`),
+        api.get(`/experience`),
+        api.get(`/project`),
+        api.get(`/skills`),
+        api.get(`/achievement`),
+      ]);
+
+      const userData = userRes.status === "fulfilled" ? userRes.value?.data : {};
+      const personalInfo = mapPersonal(userData || {});
+
+      const educationRaw =
+        eduRes.status === "fulfilled" ? eduRes.value?.data : [];
+      const education = mapEducation(safeArray(educationRaw));
+
+      const experienceRaw =
+        expRes.status === "fulfilled" ? expRes.value?.data : [];
+      const experience = mapExperience(safeArray(experienceRaw));
+
+      const projectsRaw =
+        projRes.status === "fulfilled" ? projRes.value?.data : [];
+      const projects = mapProjects(safeArray(projectsRaw));
+
+      const skillsRaw =
+        skillsRes.status === "fulfilled" ? skillsRes.value?.data : [];
+      const skills = mapSkillsList(safeArray(skillsRaw));
+      const skillsMap = mapSkillsIdMap(safeArray(skillsRaw));
+
+      const achRaw =
+        achRes.status === "fulfilled" ? achRes.value?.data : [];
+      const achievements = mapAchievements(safeArray(achRaw));
+
+      setSkillsIdMap(skillsMap);
+
+      setCvData((prev) => ({
+        ...prev,
+        personalInfo: personalInfo || prev.personalInfo,
+        education: education.length ? education : prev.education,
+        experience: experience.length ? experience : prev.experience,
+        projects: projects.length ? projects : prev.projects,
+        skills: skills.length ? skills : prev.skills,
+        achievements: achievements.length ? achievements : prev.achievements,
+      }));
     } catch (error) {
-      console.error("Error loading saved CV:", error);
+      // This block will rarely hit because we used allSettled; leaving as a safety net.
+      console.error("Unexpected error loading CV data:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // AI helpers 
+  // AI helpers
   const enhanceWithAI = async (type, content, context = {}, callback) => {
     const loadingKey = `${type}_${context.id || "main"}`;
     setAiLoading((prev) => ({ ...prev, [loadingKey]: true }));
     try {
-      const enhanced = await AIEnhancementService.enhanceText(content, type, context);
+      const enhanced = await AIEnhancementService.enhanceText(
+        content,
+        type,
+        context
+      );
       callback(enhanced);
     } catch (error) {
       alert(error.message);
@@ -548,7 +733,10 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
     const loadingKey = `generate_${type}${context.id ? "_" + context.id : ""}`;
     setAiLoading((prev) => ({ ...prev, [loadingKey]: true }));
     try {
-      const generated = await AIEnhancementService.generateContent(type, context);
+      const generated = await AIEnhancementService.generateContent(
+        type,
+        context
+      );
       callback(generated);
     } catch (error) {
       alert(error.message);
@@ -575,6 +763,28 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
     });
   };
 
+  // Utilities
+  const nextId = (arr) =>
+    arr.length ? arr.reduce((m, x) => Math.max(m, Number(x.id) || 0), 0) + 1 : 1;
+
+  const isNonEmptyExperience = (e) =>
+    e.jobTitle || e.company || e.description || e.startDate || e.endDate;
+
+  const isNonEmptyEducation = (e) =>
+    e.degree || e.institution || e.description || e.startDate || e.endDate;
+
+  const isNonEmptyProject = (p) =>
+    p.name || p.link || p.description || p.startDate || p.endDate;
+
+  const isNonEmptyAchievement = (a) => a.title || a.description || a.date;
+
+  const pickFirst = (obj, keys) => {
+    for (const k of keys) {
+      if (obj?.[k] !== undefined && obj?.[k] !== null) return obj[k];
+    }
+    return undefined;
+  };
+
   // Handlers
   const handlePersonalInfoChange = (field, value) => {
     setCvData((prev) => ({
@@ -589,18 +799,21 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
   const handleExperienceChange = (id, field, value) => {
     setCvData((prev) => ({
       ...prev,
-      experience: prev.experience.map((exp) => (exp.id === id ? { ...exp, [field]: value } : exp)),
+      experience: prev.experience.map((exp) =>
+        exp.id === id ? { ...exp, [field]: value } : exp
+      ),
     }));
   };
 
   const addExperience = () => {
-    const newId = Math.max(...cvData.experience.map((exp) => exp.id)) + 1;
+    const newId = nextId(cvData.experience);
     setCvData((prev) => ({
       ...prev,
       experience: [
         ...prev.experience,
         {
           id: newId,
+          apiId: undefined,
           jobTitle: "",
           company: "",
           location: "",
@@ -613,28 +826,40 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
     }));
   };
 
-  const removeExperience = (id) => {
-    setCvData((prev) => ({
-      ...prev,
-      experience: prev.experience.filter((exp) => exp.id !== id),
-    }));
+  const removeExperience = async (id) => {
+    const target = cvData.experience.find((e) => e.id === id);
+    try {
+      if (target?.apiId) {
+        await api.delete(`/experience/${target.apiId}`);
+      }
+    } catch (err) {
+      console.error("Failed to delete experience on server:", err);
+    } finally {
+      setCvData((prev) => ({
+        ...prev,
+        experience: prev.experience.filter((exp) => exp.id !== id),
+      }));
+    }
   };
 
   const handleEducationChange = (id, field, value) => {
     setCvData((prev) => ({
       ...prev,
-      education: prev.education.map((edu) => (edu.id === id ? { ...edu, [field]: value } : edu)),
+      education: prev.education.map((edu) =>
+        edu.id === id ? { ...edu, [field]: value } : edu
+      ),
     }));
   };
 
   const addEducation = () => {
-    const newId = Math.max(...cvData.education.map((edu) => edu.id)) + 1;
+    const newId = nextId(cvData.education);
     setCvData((prev) => ({
       ...prev,
       education: [
         ...prev.education,
         {
           id: newId,
+          apiId: undefined,
           degree: "",
           institution: "",
           location: "",
@@ -647,14 +872,23 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
     }));
   };
 
-  const removeEducation = (id) => {
-    setCvData((prev) => ({
-      ...prev,
-      education: prev.education.filter((edu) => edu.id !== id),
-    }));
+  const removeEducation = async (id) => {
+    const target = cvData.education.find((e) => e.id === id);
+    try {
+      if (target?.apiId) {
+        await api.delete(`/education/${target.apiId}`);
+      }
+    } catch (err) {
+      console.error("Failed to delete education on server:", err);
+    } finally {
+      setCvData((prev) => ({
+        ...prev,
+        education: prev.education.filter((edu) => edu.id !== id),
+      }));
+    }
   };
 
-  const addSkill = () => {
+  const addSkill = async () => {
     if (newSkill.trim() && !cvData.skills.includes(newSkill.trim())) {
       setCvData((prev) => ({
         ...prev,
@@ -664,50 +898,85 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
     }
   };
 
-  const removeSkill = (skillToRemove) => {
-    setCvData((prev) => ({
-      ...prev,
-      skills: prev.skills.filter((skill) => skill !== skillToRemove),
-    }));
+  const removeSkill = async (skillToRemove) => {
+    const serverId = skillsIdMap[skillToRemove];
+    try {
+    console.log(serverId);
+
+      if (serverId) {
+        await api.delete(`/skills/${serverId}`);
+    console.log("Remove skill");
+
+      }
+    } catch (err) {
+      console.error("Failed to delete skill on server:", err);
+    } finally {
+      setCvData((prev) => ({
+        ...prev,
+        skills: prev.skills.filter((skill) => skill !== skillToRemove),
+      }));
+      setSkillsIdMap((prev) => {
+        const n = { ...prev };
+        delete n[skillToRemove];
+        return n;
+      });
+    }
   };
 
   const handleAchievementChange = (id, field, value) => {
     setCvData((prev) => ({
       ...prev,
-      achievements: prev.achievements.map((ach) => (ach.id === id ? { ...ach, [field]: value } : ach)),
+      achievements: prev.achievements.map((ach) =>
+        ach.id === id ? { ...ach, [field]: value } : ach
+      ),
     }));
   };
 
   const addAchievement = () => {
-    const newId = Math.max(...cvData.achievements.map((ach) => ach.id)) + 1;
+    const newId = nextId(cvData.achievements);
     setCvData((prev) => ({
       ...prev,
-      achievements: [...prev.achievements, { id: newId, title: "", description: "", date: "" }],
+      achievements: [
+        ...prev.achievements,
+        { id: newId, apiId: undefined, title: "", description: "", date: "" },
+      ],
     }));
   };
 
-  const removeAchievement = (id) => {
-    setCvData((prev) => ({
-      ...prev,
-      achievements: prev.achievements.filter((ach) => ach.id !== id),
-    }));
+  const removeAchievement = async (id) => {
+    const target = cvData.achievements.find((a) => a.id === id);
+    try {
+      if (target?.apiId) {
+        await api.delete(`/achievement/${target.apiId}`);
+      }
+    } catch (err) {
+      console.error("Failed to delete achievement on server:", err);
+    } finally {
+      setCvData((prev) => ({
+        ...prev,
+        achievements: prev.achievements.filter((ach) => ach.id !== id),
+      }));
+    }
   };
 
   const handleProjectChange = (id, field, value) => {
     setCvData((prev) => ({
       ...prev,
-      projects: prev.projects.map((proj) => (proj.id === id ? { ...proj, [field]: value } : proj)),
+      projects: prev.projects.map((proj) =>
+        proj.id === id ? { ...proj, [field]: value } : proj
+      ),
     }));
   };
 
   const addProject = () => {
-    const newId = Math.max(...cvData.projects.map((proj) => proj.id)) + 1;
+    const newId = nextId(cvData.projects);
     setCvData((prev) => ({
       ...prev,
       projects: [
         ...prev.projects,
         {
           id: newId,
+          apiId: undefined,
           name: "",
           link: "",
           description: "",
@@ -719,17 +988,225 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
     }));
   };
 
-  const removeProject = (id) => {
+  const removeProject = async (id) => {
+    const target = cvData.projects.find((p) => p.id === id);
+    try {
+      if (target?.apiId) {
+        await api.delete(`/project/${target.apiId}`);
+      }
+    } catch (err) {
+      console.error("Failed to delete project on server:", err);
+    } finally {
+      setCvData((prev) => ({
+        ...prev,
+        projects: prev.projects.filter((proj) => proj.id !== id),
+      }));
+    }
+  };
+
+  // produce a PDF BLOB from the same HTML used for download
+  async function buildPdfBlob(cvData, theme, filename) {
+    const element = document.createElement("div");
+    element.innerHTML = CVDownloader.generateCVHTML(cvData, theme);
+
+    const options = {
+      margin: [0.5, 0.5, 0.5, 0.5],
+      filename,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
+    };
+
+    const blob = await html2pdf()
+      .set(options)
+      .from(element)
+      .toPdf()
+      .output("blob");
+
+    return blob;
+  }
+
+  // Save new details to the backend (POST only for new items without apiId / new skills not in map)
+  const saveNewDetails = async () => {
+    const newExperiences = cvData.experience.filter(
+      (e) => !e.apiId && isNonEmptyExperience(e)
+    );
+    const newEducation = cvData.education.filter(
+      (e) => !e.apiId && isNonEmptyEducation(e)
+    );
+    const newProjects = cvData.projects.filter(
+      (p) => !p.apiId && isNonEmptyProject(p)
+    );
+    const newAchievements = cvData.achievements.filter(
+      (a) => !a.apiId && isNonEmptyAchievement(a)
+    );
+    const newSkills = cvData.skills.filter((s) => !skillsIdMap[s]);
+
+    const results = {
+      exp: [],
+      edu: [],
+      proj: [],
+      ach: [],
+      skills: [],
+    };
+
+    // POST experiences
+    for (const e of newExperiences) {
+      try {
+        const payload = {
+          jobTitle: e.jobTitle,
+          company: e.company,
+          location: e.location,
+          startDate: e.startDate || null,
+          endDate: e.current ? null : e.endDate || null,
+          description: e.description,
+        };
+        const res = await api.post(`/experience`, payload);
+        const data = res?.data || {};
+        const newId =
+          pickFirst(data, ["experienceId", "id", "experienceID"]) ??
+          pickFirst(data?.data || {}, ["experienceId", "id", "experienceID"]);
+        results.exp.push({ localId: e.id, apiId: newId });
+      } catch (err) {
+        console.error("Failed to save experience:", err);
+      }
+    }
+
+    // POST education
+    for (const ed of newEducation) {
+      try {
+        const payload = {
+          degree: ed.degree,
+          institution: ed.institution,
+          location: ed.location,
+          startDate: ed.startDate || null,
+          endDate: ed.endDate || null,
+          gpa: ed.gpa || null,
+          description: ed.description,
+        };
+        const res = await api.post(`/education`, payload);
+        const data = res?.data || {};
+        const newId =
+          pickFirst(data, ["educationId", "id", "educationID"]) ??
+          pickFirst(data?.data || {}, ["educationId", "id", "educationID"]);
+        results.edu.push({ localId: ed.id, apiId: newId });
+      } catch (err) {
+        console.error("Failed to save education:", err);
+      }
+    }
+
+    // POST projects
+    for (const p of newProjects) {
+      try {
+        const payload = {
+          projectName: p.name,
+          name: p.name, // extra fallback
+          githublink: p.link,
+          githubLink: p.link,
+          link: p.link,
+          projectDescription: p.description,
+          description: p.description,
+          startDate: p.startDate || null,
+          endDate: p.current ? null : p.endDate || null,
+        };
+        const res = await api.post(`/project`, payload);
+        const data = res?.data || {};
+        const newId =
+          pickFirst(data, ["projectId", "id", "projectID"]) ??
+          pickFirst(data?.data || {}, ["projectId", "id", "projectID"]);
+        results.proj.push({ localId: p.id, apiId: newId });
+      } catch (err) {
+        console.error("Failed to save project:", err);
+      }
+    }
+
+    // POST achievements
+    for (const a of newAchievements) {
+      try {
+        const payload = {
+          achievementTitle: a.title,
+          title: a.title,
+          achievementDescription: a.description,
+          description: a.description,
+          date: a.date || null,
+        };
+        const res = await api.post(`/achievement`, payload);
+        const data = res?.data || {};
+        const newId =
+          pickFirst(data, ["achievementId", "id", "achievementID"]) ??
+          pickFirst(data?.data || {}, ["achievementId", "id", "achievementID"]);
+        results.ach.push({ localId: a.id, apiId: newId });
+      } catch (err) {
+        console.error("Failed to save achievement:", err);
+      }
+    }
+
+    // POST skills (as simple names)
+    for (const s of newSkills) {
+      try {
+        const payload = { skillName: s };
+        const res = await api.post(`/skills`, payload);
+        const data = res?.data || {};
+        const newId =
+          pickFirst(data, ["skillId", "id", "skillID"]) ??
+          pickFirst(data?.data || {}, ["skillId", "id", "skillID"]);
+        results.skills.push({ name: s, apiId: newId });
+      } catch (err) {
+        console.error("Failed to save skill:", err);
+      }
+    }
+
+    // Update local state with new apiIds / skills map
     setCvData((prev) => ({
       ...prev,
-      projects: prev.projects.filter((proj) => proj.id !== id),
+      experience: prev.experience.map((e) => {
+        const saved = results.exp.find((x) => x.localId === e.id && x.apiId);
+        return saved ? { ...e, apiId: saved.apiId } : e;
+      }),
+      education: prev.education.map((ed) => {
+        const saved = results.edu.find((x) => x.localId === ed.id && x.apiId);
+        return saved ? { ...ed, apiId: saved.apiId } : ed;
+      }),
+      projects: prev.projects.map((p) => {
+        const saved = results.proj.find((x) => x.localId === p.id && x.apiId);
+        return saved ? { ...p, apiId: saved.apiId } : p;
+      }),
+      achievements: prev.achievements.map((a) => {
+        const saved = results.ach.find((x) => x.localId === a.id && x.apiId);
+        return saved ? { ...a, apiId: saved.apiId } : a;
+      }),
     }));
+
+    if (results.skills.length) {
+      setSkillsIdMap((prev) => {
+        const updated = { ...prev };
+        for (const s of results.skills) {
+          if (s.name && s.apiId) updated[s.name] = s.apiId;
+        }
+        return updated;
+      });
+    }
   };
 
   const handleSave = async () => {
     try {
-      const savedResume = await resumeAPI.saveResume(cvData);
-      alert("CV saved successfully!");
+      // Save any NEW details to backend
+      await saveNewDetails();
+
+      // Build a PDF from the current form and upload
+      const firstName = cvData.personalInfo.firstName || "Resume";
+      const lastName = cvData.personalInfo.lastName || "CV";
+      const fileName = `${firstName}_${lastName}.pdf`.replace(/\s+/g, "_");
+
+      const pdfBlob = await buildPdfBlob(cvData, theme, fileName);
+
+      // Upload the PDF (existing logic)
+      const file = new File([pdfBlob], fileName, { type: "application/pdf" });
+      await resumeAPI.uploadFile(file, fileName);
+
+      alert(
+        "CV details saved and PDF uploaded! You can now preview it in CV Manager."
+      );
     } catch (error) {
       console.error("Error saving CV:", error);
       alert(`Failed to save CV: ${error.message}`);
@@ -773,7 +1250,7 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
             <h1 className="text-3xl font-bold">CV Builder</h1>
             <p className="text-muted-foreground">Create a professional CV with AI assistance</p>
           </div>
-          <div className="flex gap-2">
+        <div className="flex gap-2">
             <Button variant="outline" onClick={handlePreview}>
               <Eye className="w-4 h-4 mr-2" />
               Preview
@@ -789,7 +1266,7 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
           </div>
         </div>
 
-        {/* NEW: Theme Picker */}
+        {/* Theme Picker */}
         <ThemePicker theme={theme} onChange={(t) => setTheme(resolveTheme(t))} />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -894,17 +1371,20 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
                     />
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <Label htmlFor="summary">Professional Summary</Label>
                     <AIEnhanceButton
-                      onEnhance={() => enhanceWithAI(
-                        'summary',
-                        cvData.personalInfo.summary,
-                        { jobTitle: cvData.experience[0]?.jobTitle },
-                        (enhanced) => handlePersonalInfoChange("summary", enhanced)
-                      )}
+                      onEnhance={() =>
+                        enhanceWithAI(
+                          "summary",
+                          cvData.personalInfo.summary,
+                          { jobTitle: cvData.experience[0]?.jobTitle },
+                          (enhanced) =>
+                            handlePersonalInfoChange("summary", enhanced)
+                        )
+                      }
                       isLoading={aiLoading.summary_main}
                       disabled={!cvData.personalInfo.summary.trim()}
                     />
@@ -922,15 +1402,19 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => generateWithAI(
-                        'summary',
-                        { 
-                          jobTitle: cvData.experience[0]?.jobTitle || 'Professional',
-                          skills: cvData.skills,
-                          experience: cvData.experience.length
-                        },
-                        (generated) => handlePersonalInfoChange("summary", generated)
-                      )}
+                      onClick={() =>
+                        generateWithAI(
+                          "summary",
+                          {
+                            jobTitle:
+                              cvData.experience[0]?.jobTitle || "Professional",
+                            skills: cvData.skills,
+                            experience: cvData.experience.length,
+                          },
+                          (generated) =>
+                            handlePersonalInfoChange("summary", generated)
+                        )
+                      }
                       disabled={aiLoading.generate_summary}
                       className="w-full"
                     >
@@ -976,16 +1460,14 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
                   >
                     <div className="flex justify-between items-center">
                       <Badge variant="outline">Experience {index + 1}</Badge>
-                      {cvData.experience.length > 1 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeExperience(exp.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeExperience(exp.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1052,16 +1534,23 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
                       <div className="flex justify-between items-center">
                         <Label>Description</Label>
                         <AIEnhanceButton
-                          onEnhance={() => enhanceWithAI(
-                            'experience',
-                            exp.description,
-                            { 
-                              id: exp.id,
-                              jobTitle: exp.jobTitle,
-                              company: exp.company
-                            },
-                            (enhanced) => handleExperienceChange(exp.id, "description", enhanced)
-                          )}
+                          onEnhance={() =>
+                            enhanceWithAI(
+                              "experience",
+                              exp.description,
+                              {
+                                id: exp.id,
+                                jobTitle: exp.jobTitle,
+                                company: exp.company,
+                              },
+                              (enhanced) =>
+                                handleExperienceChange(
+                                  exp.id,
+                                  "description",
+                                  enhanced
+                                )
+                            )
+                          }
                           isLoading={aiLoading[`experience_${exp.id}`]}
                           disabled={!exp.description.trim()}
                         />
@@ -1082,14 +1571,21 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => generateWithAI(
-                            'experience',
-                            { 
-                              jobTitle: exp.jobTitle,
-                              company: exp.company
-                            },
-                            (generated) => handleExperienceChange(exp.id, "description", generated)
-                          )}
+                          onClick={() =>
+                            generateWithAI(
+                              "experience",
+                              {
+                                jobTitle: exp.jobTitle,
+                                company: exp.company,
+                              },
+                              (generated) =>
+                                handleExperienceChange(
+                                  exp.id,
+                                  "description",
+                                  generated
+                                )
+                            )
+                          }
                           disabled={aiLoading[`generate_experience_${exp.id}`]}
                           className="w-full"
                         >
@@ -1137,16 +1633,14 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
                   >
                     <div className="flex justify-between items-center">
                       <Badge variant="outline">Education {index + 1}</Badge>
-                      {cvData.education.length > 1 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeEducation(edu.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeEducation(edu.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1275,16 +1769,14 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
                     >
                       <div className="flex justify-between items-center">
                         <Badge variant="outline">Achievement {index + 1}</Badge>
-                        {cvData.achievements.length > 1 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeAchievement(achievement.id)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeAchievement(achievement.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
 
                       <div className="space-y-4">
@@ -1306,15 +1798,22 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
                           <div className="flex justify-between items-center">
                             <Label>Description</Label>
                             <AIEnhanceButton
-                              onEnhance={() => enhanceWithAI(
-                                'achievement',
-                                achievement.description,
-                                { 
-                                  id: achievement.id,
-                                  jobTitle: cvData.experience[0]?.jobTitle
-                                },
-                                (enhanced) => handleAchievementChange(achievement.id, "description", enhanced)
-                              )}
+                              onEnhance={() =>
+                                enhanceWithAI(
+                                  "achievement",
+                                  achievement.description,
+                                  {
+                                    id: achievement.id,
+                                    jobTitle: cvData.experience[0]?.jobTitle,
+                                  },
+                                  (enhanced) =>
+                                    handleAchievementChange(
+                                      achievement.id,
+                                      "description",
+                                      enhanced
+                                    )
+                                )
+                              }
                               isLoading={aiLoading[`achievement_${achievement.id}`]}
                               disabled={!achievement.description.trim()}
                             />
@@ -1364,16 +1863,14 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
                   >
                     <div className="flex justify-between items-center">
                       <Badge variant="outline">Project {index + 1}</Badge>
-                      {cvData.projects.length > 1 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeProject(project.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeProject(project.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1417,7 +1914,6 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
                           }
                           disabled={project.current}
                         />
-                        
                       </div>
                     </div>
 
@@ -1425,15 +1921,22 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
                       <div className="flex justify-between items-center">
                         <Label>Description</Label>
                         <AIEnhanceButton
-                          onEnhance={() => enhanceWithAI(
-                            'project',
-                            project.description,
-                            { 
-                              id: project.id,
-                              projectName: project.name
-                            },
-                            (enhanced) => handleProjectChange(project.id, "description", enhanced)
-                          )}
+                          onEnhance={() =>
+                            enhanceWithAI(
+                              "project",
+                              project.description,
+                              {
+                                id: project.id,
+                                projectName: project.name,
+                              },
+                              (enhanced) =>
+                                handleProjectChange(
+                                  project.id,
+                                  "description",
+                                  enhanced
+                                )
+                            )
+                          }
                           isLoading={aiLoading[`project_${project.id}`]}
                           disabled={!project.description.trim()}
                         />
@@ -1441,7 +1944,11 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
                       <Textarea
                         value={project.description}
                         onChange={(e) =>
-                          handleProjectChange(project.id, "description", e.target.value)
+                          handleProjectChange(
+                            project.id,
+                            "description",
+                            e.target.value
+                          )
                         }
                         placeholder="Describe the project, technologies used, and key achievements..."
                         rows={4}
@@ -1450,14 +1957,21 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => generateWithAI(
-                            'project',
-                            { 
-                              projectName: project.name,
-                              id: project.id
-                            },
-                            (generated) => handleProjectChange(project.id, "description", generated)
-                          )}
+                          onClick={() =>
+                            generateWithAI(
+                              "project",
+                              {
+                                projectName: project.name,
+                                id: project.id,
+                              },
+                              (generated) =>
+                                handleProjectChange(
+                                  project.id,
+                                  "description",
+                                  generated
+                                )
+                            )
+                          }
                           disabled={aiLoading[`generate_project_${project.id}`]}
                           className="w-full"
                         >
@@ -1479,11 +1993,13 @@ export function CVBuilder({ user, accessToken, onNavigate }) {
                 ))}
               </CardContent>
             </Card>
-          </TabsContent>          
+          </TabsContent>
         </Tabs>
       </div>
 
-      {showPreview && <CVPreview cvData={cvData} onClose={handleClosePreview} theme={theme} />}
+      {showPreview && (
+        <CVPreview cvData={cvData} onClose={handleClosePreview} theme={theme} />
+      )}
     </>
   );
 }

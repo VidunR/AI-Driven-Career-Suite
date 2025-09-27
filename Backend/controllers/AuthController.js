@@ -2,6 +2,7 @@ import prisma from "../config/db.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
+import axios from "axios";
 
 
 // This will capitalize the word we enter
@@ -130,33 +131,63 @@ export const userLoginRequest = async (req, res) => {
     }
 }
 
-// Google OAuth
+//Google OAuth
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export const googleLogin = async (req, res) => {
-  const { idToken } = req.body;
+  const { code } = req.body; // Changed from idToken to code
   const saltRounds = 10;
-  if (!idToken) return res.status(400).json({ error: "ID token is required" });
+  
+  console.log("Received Google auth request with code:", code ? "present" : "missing");
+  
+  if (!code) return res.status(400).json({ error: "Authorization code is required" });
 
   try {
+    console.log("Exchanging code for tokens...");
+    // Exchange authorization code for tokens
+    const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      code: code,
+      grant_type: 'authorization_code',
+      redirect_uri: 'postmessage' // This is standard for @react-oauth/google
+    });
+
+    const { id_token } = tokenResponse.data;
+    console.log("Received ID token:", id_token ? "present" : "missing");
+    
+    if (!id_token) {
+      return res.status(400).json({ error: "Failed to get ID token from Google" });
+    }
+
+    console.log("Verifying ID token...");
+    // Verify the ID token
     const ticket = await client.verifyIdToken({
-      idToken,
+      idToken: id_token,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
 
     const payload = ticket.getPayload();
     const { email, given_name, family_name } = payload;
+    console.log("Google user info:", { email, given_name, family_name });
 
+    if (!email) {
+      return res.status(400).json({ error: "Email not provided by Google" });
+    }
+
+    // Check if user already exists
     let user = await prisma.registeredUser.findUnique({ where: { email } });
+    console.log("Existing user:", user ? "found" : "not found");
 
     if (!user) {
+      console.log("Creating new user...");
       // Register new user
       const defaultSettings = await prisma.settingsPreference.findFirst({
         select: { preferenceId: true },
         orderBy: { preferenceId: 'asc' },
       });
 
-      const hashedPassword = await bcrypt.hash(process.env.GOOGLE_PASSWORD, saltRounds);
+      const hashedPassword = await bcrypt.hash(process.env.GOOGLE_PASSWORD || "google-oauth-password", saltRounds);
 
       user = await prisma.registeredUser.create({
         data: {
@@ -164,10 +195,12 @@ export const googleLogin = async (req, res) => {
           lastName: capitalizeWords(family_name || ""),
           email: email,
           hashedPassword: hashedPassword,
+          country: "Not Specified", // You might want to get this from Google or set a default
           createdAt: new Date(),
           preferenceId: parseInt(defaultSettings.preferenceId)
         }
       });
+      console.log("New user created with ID:", user.userId);
     }
 
     // Issue JWT like normal login
@@ -177,93 +210,138 @@ export const googleLogin = async (req, res) => {
       { expiresIn: process.env.JWT_EXPIRES_IN }
     );
 
-    res.status(200).json({ message: "User logged in via Google", token });
+    console.log("JWT token generated successfully");
+
+    res.status(200).json({ 
+      message: "User logged in via Google", 
+      token,
+      user: {
+        userId: user.userId,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email
+      }
+    });
 
   } catch (err) {
-    console.error(err);
+    console.error("Google OAuth Error:", err.response?.data || err.message);
     res.status(500).json({ error: "Google login failed" });
   }
 };
 
-// LinkedIn OAuth
 export const linkedinLogin = async (req, res) => {
-
     const { code } = req.body;
     const saltRounds = 10;
+
+    console.log("Received LinkedIn auth request with code:", code ? "present" : "missing");
 
     if (!code) return res.status(400).json({ error: "Authorization code is required" });
 
     try {
-        // Exchange code for LinkedIn access token
+        console.log("Exchanging code for LinkedIn access token...");
+        
+        // Step 1: Exchange code for access token (same as before)
         const tokenResponse = await axios.post(
-        "https://www.linkedin.com/oauth/v2/accessToken",
-        null,
-        {
-            params: {
-            grant_type: "authorization_code",
-            code,
-            redirect_uri: process.env.LINKEDIN_REDIRECT_URI,
-            client_id: process.env.LINKEDIN_CLIENT_ID,
-            client_secret: process.env.LINKEDIN_CLIENT_SECRET,
-            },
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        }
+            "https://www.linkedin.com/oauth/v2/accessToken",
+            null,
+            {
+                params: {
+                    grant_type: "authorization_code",
+                    code,
+                    redirect_uri: process.env.LINKEDIN_REDIRECT_URI,
+                    client_id: process.env.LINKEDIN_CLIENT_ID,
+                    client_secret: process.env.LINKEDIN_CLIENT_SECRET,
+                },
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            }
         );
 
         const accessToken = tokenResponse.data.access_token;
+        console.log("LinkedIn access token received:", accessToken ? "present" : "missing");
 
-        // Get user profile info
-        const profileResponse = await axios.get("https://api.linkedin.com/v2/me", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        });
-
-        const emailResponse = await axios.get(
-        "https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))",
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
-
-        const firstName = profileResponse.data.localizedFirstName || "";
-        const lastName = profileResponse.data.localizedLastName || "";
-        const email = emailResponse.data.elements[0]["handle~"].emailAddress;
-
-        // Check if user already exists
-        let user = await prisma.registeredUser.findUnique({ where: { email } });
-
-        if (!user) {
-        // New user, register with placeholder password
-        const defaultSettings = await prisma.settingsPreference.findFirst({
-            select: { preferenceId: true },
-            orderBy: { preferenceId: "asc" },
-        });
-
-        const hashedPassword = await bcrypt.hash(
-            process.env.GOOGLE_PASSWORD,
-            saltRounds
-        );
-
-        user = await prisma.registeredUser.create({
-            data: {
-            firstName: capitalizeWords(firstName),
-            lastName: capitalizeWords(lastName),
-            email: email,
-            hashedPassword: hashedPassword,
-            createdAt: new Date(),
-            preferenceId: parseInt(defaultSettings.preferenceId),
-            },
-        });
+        if (!accessToken) {
+            return res.status(400).json({ error: "Failed to get access token from LinkedIn" });
         }
 
-        // Issue JWT like your other endpoints
+        console.log("Fetching LinkedIn user info via userinfo endpoint...");
+        
+        // Step 2: Use the NEW userinfo endpoint (OpenID Connect)
+        const userResponse = await axios.get("https://api.linkedin.com/v2/userinfo", {
+            headers: { 
+                Authorization: `Bearer ${accessToken}`,
+            },
+        });
+
+        const { sub, name, given_name, family_name, email, email_verified } = userResponse.data;
+        
+        console.log("LinkedIn user info:", { sub, name, given_name, family_name, email });
+
+        if (!email) {
+            return res.status(400).json({ error: "Email not provided by LinkedIn" });
+        }
+
+        // Step 3: Check if user already exists
+        let user = await prisma.registeredUser.findUnique({ where: { email } });
+        console.log("Existing user:", user ? "found" : "not found");
+
+        if (!user) {
+            console.log("Creating new LinkedIn user...");
+            
+            // Get default settings
+            const defaultSettings = await prisma.settingsPreference.findFirst({
+                select: { preferenceId: true },
+                orderBy: { preferenceId: "asc" },
+            });
+
+            const hashedPassword = await bcrypt.hash(
+                process.env.GOOGLE_PASSWORD || "linkedin-oauth-password",
+                saltRounds
+            );
+
+            user = await prisma.registeredUser.create({
+                data: {
+                    firstName: capitalizeWords(given_name || name?.split(' ')[0] || "LinkedIn"),
+                    lastName: capitalizeWords(family_name || name?.split(' ')[1] || "User"),
+                    email: email,
+                    hashedPassword: hashedPassword,
+                    country: "Not Specified",
+                    createdAt: new Date(),
+                    preferenceId: parseInt(defaultSettings.preferenceId),
+                },
+            });
+            
+            console.log("New LinkedIn user created with ID:", user.userId);
+        }
+
+        // Step 4: Issue JWT token
         const token = jwt.sign(
-        { userId: user.userId, email: user.email },
-        process.env.JWT_SECRET_KEY,
-        { expiresIn: process.env.JWT_EXPIRES_IN }
+            { userId: user.userId, email: user.email },
+            process.env.JWT_SECRET_KEY,
+            { expiresIn: process.env.JWT_EXPIRES_IN }
         );
 
-        res.status(200).json({ message: "User logged in via LinkedIn", token });
+        console.log("JWT token generated successfully for LinkedIn user");
+
+        res.status(200).json({ 
+            message: "User logged in via LinkedIn", 
+            token,
+            user: {
+                userId: user.userId,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email
+            }
+        });
 
     } catch (err) {
-        console.error(err.response?.data || err.message);
+        console.error("LinkedIn OAuth Error:", err.response?.data || err.message);
+        
+        if (err.response?.status === 400) {
+            return res.status(400).json({ error: "Invalid LinkedIn authorization code" });
+        } else if (err.response?.status === 401) {
+            return res.status(401).json({ error: "LinkedIn authentication failed" });
+        }
+        
         res.status(500).json({ error: "LinkedIn login failed" });
     }
 };

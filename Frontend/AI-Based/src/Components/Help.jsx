@@ -10,6 +10,13 @@ import {
   Mail, Send, ExternalLink, ChevronDown, ChevronRight 
 } from 'lucide-react';
 import { toast } from 'sonner';
+import emailjs from '@emailjs/browser';
+
+// You can move these to .env (see steps below)
+// For Vite: VITE_EMAILJS_SERVICE_ID / VITE_EMAILJS_TEMPLATE_ID / VITE_EMAILJS_PUBLIC_KEY
+const EMAILJS_SERVICE_ID  = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+const EMAILJS_PUBLIC_KEY  = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 
 export function Help({ user, accessToken, onNavigate }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -19,65 +26,22 @@ export function Help({ user, accessToken, onNavigate }) {
     priority: 'medium'
   });
   const [expandedFAQ, setExpandedFAQ] = useState(null);
+  const [sending, setSending] = useState(false);
 
   const faqItems = [
-    {
-      id: 'getting-started',
-      question: 'How do I get started with mock interviews?',
-      answer: 'To begin your mock interview journey, navigate to the "Mock Interview" section and click "Start New Interview". Choose your target position, interview type, and difficulty level. Our AI will generate personalized questions based on your selections.'
-    },
-    {
-      id: 'cv-builder',
-      question: 'How do I create and edit my CV?',
-      answer: 'Go to the CV Manager section and click "Create New CV" or edit an existing one. Our CV builder includes sections for personal information, work experience, education, skills, and projects. You can save multiple versions for different job applications.'
-    },
-    {
-      id: 'interview-types',
-      question: 'What types of interviews are available?',
-      answer: 'We offer four types of mock interviews: Behavioral (situational questions), Technical (coding and technical concepts), Case Study (business problem-solving), and Mixed (combination of all types). Choose based on your target role and preparation needs.'
-    },
-    {
-      id: 'scoring',
-      question: 'How is my interview performance scored?',
-      answer: 'Our AI evaluates your responses based on multiple criteria including communication clarity, technical accuracy, problem-solving approach, and leadership qualities. Scores range from 0-100% with detailed feedback for improvement.'
-    },
-    {
-      id: 'job-search',
-      question: 'How does the job search feature work?',
-      answer: 'Our job search aggregates opportunities from multiple sources. Use filters for location, job type, experience level, and skills. Save interesting positions and track your applications all in one place.'
-    },
-    {
-      id: 'privacy',
-      question: 'Is my interview data private and secure?',
-      answer: 'Yes, we take privacy seriously. Your interview recordings and responses are encrypted and stored securely. You can control your privacy settings and delete your data at any time. We never share personal information without consent.'
-    }
+    { id: 'getting-started', question: 'How do I get started with mock interviews?', answer: 'To begin your mock interview journey, navigate to the "Mock Interview" section and click "Start New Interview". Choose your target position, interview type, and difficulty level. Our AI will generate personalized questions based on your selections.' },
+    { id: 'cv-builder', question: 'How do I create and edit my CV?', answer: 'Go to the CV Manager section and click "Create New CV" or edit an existing one. Our CV builder includes sections for personal information, work experience, education, skills, and projects. You can save multiple versions for different job applications.' },
+    { id: 'interview-types', question: 'What types of interviews are available?', answer: 'We offer four types of mock interviews: Behavioral (situational questions), Technical (coding and technical concepts), Case Study (business problem-solving), and Mixed (combination of all types). Choose based on your target role and preparation needs.' },
+    { id: 'scoring', question: 'How is my interview performance scored?', answer: 'Our AI evaluates your responses based on multiple criteria including communication clarity, technical accuracy, problem-solving approach, and leadership qualities. Scores range from 0-100% with detailed feedback for improvement.' },
+    { id: 'job-search', question: 'How does the job search feature work?', answer: 'Our job search aggregates opportunities from multiple sources. Use filters for location, job type, experience level, and skills. Save interesting positions and track your applications all in one place.' },
+    { id: 'privacy', question: 'Is my interview data private and secure?', answer: 'Yes, we take privacy seriously. Your interview recordings and responses are encrypted and stored securely. You can control your privacy settings and delete your data at any time. We never share personal information without consent.' }
   ];
 
   const tutorials = [
-    {
-      title: 'Getting Started with AI Career Suite',
-      duration: '5 min',
-      description: 'Learn the basics of navigating the platform and setting up your profile.',
-      type: 'video'
-    },
-    {
-      title: 'Mastering Mock Interviews',
-      duration: '10 min',
-      description: 'Best practices for conducting effective mock interviews and using feedback.',
-      type: 'video'
-    },
-    {
-      title: 'Building a Winning CV',
-      duration: '8 min',
-      description: 'Step-by-step guide to creating professional CVs that get noticed.',
-      type: 'guide'
-    },
-    {
-      title: 'Job Search Strategies',
-      duration: '12 min',
-      description: 'How to effectively use our job search tools to find your ideal position.',
-      type: 'guide'
-    }
+    { title: 'Getting Started with AI Career Suite', duration: '5 min', description: 'Learn the basics of navigating the platform and setting up your profile.', type: 'video' },
+    { title: 'Mastering Mock Interviews', duration: '10 min', description: 'Best practices for conducting effective mock interviews and using feedback.', type: 'video' },
+    { title: 'Building a Winning CV', duration: '8 min', description: 'Step-by-step guide to creating professional CVs that get noticed.', type: 'guide' },
+    { title: 'Job Search Strategies', duration: '12 min', description: 'How to effectively use our job search tools to find your ideal position.', type: 'guide' }
   ];
 
   const filteredFAQ = faqItems.filter(item =>
@@ -85,13 +49,49 @@ export function Help({ user, accessToken, onNavigate }) {
     item.answer.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleContactSubmit = () => {
-    toast.success('Your message has been sent. We\'ll respond within 24 hours.');
-    setContactForm({ subject: '', message: '', priority: 'medium' });
-  };
+  const toggleFAQ = (id) => setExpandedFAQ(expandedFAQ === id ? null : id);
 
-  const toggleFAQ = (id) => {
-    setExpandedFAQ(expandedFAQ === id ? null : id);
+  // === Send email directly from frontend via EmailJS ===
+  const handleContactSubmit = async () => {
+    const subject = contactForm.subject.trim();
+    const message = contactForm.message.trim();
+    if (!subject || !message) {
+      toast.error('Please enter both subject and message.');
+      return;
+    }
+    try {
+      setSending(true);
+
+      // Keep your template variables in sync with EmailJS template
+      const templateParams = {
+        // We recommend setting the "To" address to skillsprint.official@outlook.com inside the EmailJS template.
+        // If you’d rather pass it dynamically, add a variable in template "To email" as {{to_email}} and include:
+        // to_email: 'skillsprint.official@outlook.com',
+
+        subject,
+        message,
+        priority: (contactForm.priority || 'medium').toUpperCase(),
+        name: user?.fullName || user?.name || 'SkillSprint User',
+        from_email: user?.email || 'no-reply@skillsprint.app',
+      };
+
+      await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        templateParams,
+        { publicKey: EMAILJS_PUBLIC_KEY }
+      );
+
+      toast.success("Your message has been sent. We'll respond within 24 hours.");
+      // Clear fields after send
+      setContactForm({ subject: '', message: '', priority: 'medium' });
+    } catch (err) {
+      console.error('Email send error:', err);
+      const detail = err?.text || err?.message || 'Failed to send message. Please try again.';
+      toast.error(detail);
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -228,9 +228,9 @@ export function Help({ user, accessToken, onNavigate }) {
                     rows={5}
                   />
                 </div>
-                <Button onClick={handleContactSubmit} className="w-full">
+                <Button onClick={handleContactSubmit} className="w-full" disabled={sending}>
                   <Send className="h-4 w-4 mr-2" />
-                  Send Message
+                  {sending ? 'Sending…' : 'Send Message'}
                 </Button>
               </CardContent>
             </Card>
@@ -246,19 +246,8 @@ export function Help({ user, accessToken, onNavigate }) {
                     <Mail className="h-5 w-5 text-muted-foreground" />
                     <div>
                       <p className="font-medium">Email Support</p>
-                      <p className="text-sm text-muted-foreground">support@aicareersuite.com</p>
+                      <p className="text-sm text-muted-foreground">skillsprint.official@outlook.com</p>
                       <p className="text-xs text-muted-foreground">Response within 24 hours</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <MessageCircle className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Live Chat</p>
-                      <p className="text-sm text-muted-foreground">Available 9 AM - 6 PM EST</p>
-                      <Button variant="outline" size="sm" className="mt-2">
-                        Start Chat
-                      </Button>
                     </div>
                   </div>
                 </div>

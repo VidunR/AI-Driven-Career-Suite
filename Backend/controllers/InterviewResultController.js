@@ -8,7 +8,7 @@ export const getInterviewResults = async(req, res) => {
 
     try{
         const interviewResults = await prisma.interview.findUnique({
-            where: {userId: parseInt(userID), interviewId: parseInt(interviewID)},
+            where: {interviewId: parseInt(interviewID)},
             select: {
                 interviewJobRole: {
                     select: {

@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import { LinkedInCallback } from "./Components/LinkedInCallback.jsx";
 
 import { AuthProvider } from "./context/AuthContext";
 import { PrivateRoute } from "./components/PrivateRoute";
@@ -20,6 +21,7 @@ import { Dashboard } from "./Components/Dashboard";
 import { CVManager } from "./Components/CVManager";
 import { CVBuilder } from "./Components/CVBuilder";
 import JobSearch from "./Components/JobSearch";
+import CVPicker from "./Components/CVPicker"
 import { MockInterviewSetup } from "./Components/MockInterviewSetup";
 import { MockInterviewSession } from "./Components/MockInterviewSession";
 import { InterviewResults } from "./Components/InterviewResults";
@@ -28,6 +30,7 @@ import { Leaderboard } from "./Components/Leaderboard";
 import { Profile } from "./Components/Profile";
 import { Settings } from "./Components/Settings";
 import { Help } from "./components/Help";
+
 
 export default function App() {
   const GOOGLE_CLIENT_ID =
@@ -48,6 +51,7 @@ export default function App() {
             <Route path="/careers" element={<Careers />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/blog" element={<Blog />} />
+            <Route path="/auth/linkedin/callback" element={<LinkedInCallback />} />
 
             {/* Protected routes */}
             <Route element={<PrivateRoute />}>
@@ -55,6 +59,7 @@ export default function App() {
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="cv-manager" element={<CVManager />} />
                 <Route path="cv-builder" element={<CVBuilder />} />
+                <Route path="job-search/select-cv" element={<CVPicker />} />
                 <Route path="job-search" element={<JobSearch />} />
                 <Route path="mock-interview-setup" element={<MockInterviewSetup />} />
                 <Route path="mock-interview-session" element={<MockInterviewSession />} />
