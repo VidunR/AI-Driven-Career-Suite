@@ -3,6 +3,7 @@ import { spawn } from "child_process";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import axios from "axios";
 
 
 // Recreate __dirname in ESM
@@ -141,27 +142,98 @@ export const extractSelectedCVJobs = async (req, res) => {
 
 // Get Jobs using Keyword Search
 
-/*export const getJobsWithoutExtract = async (req, res) => {
-  const { jobTitle, country } = req.body;
+export const getJobsWithoutExtract = async (req, res) => {
+  let { jobTitle, country } = req.body;
+
+    const COUNTRY_ALIASES = {
+    "us": "United States", "usa": "United States", "u.s.": "United States", "u.s.a": "United States",
+    "united states of america": "United States",
+    "uk": "United Kingdom", "u.k.": "United Kingdom", "england": "United Kingdom",
+    "scotland": "United Kingdom", "wales": "United Kingdom", "northern ireland": "United Kingdom",
+    "uae": "United Arab Emirates",
+    "sl": "Sri Lanka", "lka": "Sri Lanka",
+    "south korea": "Korea, Republic of",
+    "north korea": "Korea, Democratic People's Republic of",
+  };
+
+  const ROLE_SYNONYMS = {
+    "Software Engineer": [
+      "software engineer","software developer","programmer","developer",
+      "software dev","sw engineer","se","swe","sde","sd1","sd2",
+      "senior software engineer","full stack developer","backend developer","frontend developer"
+    ],
+    "Cybersecurity Specialist": [
+      "cybersecurity specialist","cyber security specialist","security engineer",
+      "information security analyst","infosec analyst","soc analyst","security analyst",
+      "application security engineer","appsec","security operations"
+    ],
+    "Accountant": [
+      "accountant","accounts executive","senior accountant","staff accountant",
+      "financial accountant","general ledger accountant","gl accountant"
+    ],
+    "Project Manager": [
+      "project manager","pm","technical project manager","it project manager",
+      "program manager","delivery manager","scrum master"
+    ],
+    "Digital Marketer": [
+      "digital marketer","digital marketing specialist","performance marketer",
+      "seo specialist","sem specialist","social media marketer","growth marketer",
+      "ppc specialist"
+    ],
+  };
+
+  const normalizeCountry = (input = "") => {
+    const key = String(input).toLowerCase().trim();
+    return COUNTRY_ALIASES[key] || key;
+  }
+
+  const normalizeRole = (input = "") => {
+    const key = String(input).toLowerCase().trim();
+    for (const [canonical, synonyms] of Object.entries(ROLE_SYNONYMS)) {
+      if (synonyms.some(s => s.toLowerCase() === key)) {
+        return canonical;
+      }
+    }
+    return input;
+  };
 
   try {
-    const response = await axios.get("https://api.apijobs.dev/v1/job/search", {
-      headers: {
-        "apikey": process.env.API_JOB_DEV,
+    jobTitle = normalizeRole(jobTitle);
+    country  = normalizeCountry(country);
+
+    const results = await axios.post(
+      "https://api.apijobs.dev/v1/job/search",
+      {
+        q: jobTitle,
+        country: country, 
       },
-      params: {
-        country: country,
-        q: jobTitle
+      {
+        headers: {
+          apikey: process.env.API_JOB_DEV,
+          "Content-Type": "application/json"
+        }
       }
-    });
+    );
 
-    return res.status(200).json(response.data);
+    const sendData = {
+      "keywords": {
+        "from": 0,
+        "size": 50,
+        "q": jobTitle
+      },
+      "jobs": results.data.hits
+    }
 
+    return res.status(200).json(sendData);
   } catch (err) {
-    console.error("APIJobDev error:", err.message || err);
-    return res
-      .status(500)
-      .json({ errorMessage: `An error occurred: ${err.message || err}` });
+    console.error(
+      "APIJobDev error:",
+      err.response?.status,
+      err.response?.data || err.message
+    );
+    return res.status(500).json({
+      errorMessage: `An error occurred: ${err.response?.data?.message || err.message}`
+    });
   }
-};*/
+};
 

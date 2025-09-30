@@ -75,7 +75,6 @@ export function RegisterPage({ onBack }) {
     setIsSubmitting(true);
     setError("");
 
-    // if any validation errors exist, show generic error
     if (Object.keys(validation).length > 0) {
       setError("Please enter valid data.");
       setIsSubmitting(false);
@@ -90,7 +89,6 @@ export function RegisterPage({ onBack }) {
       );
 
       if (response.data && response.data.newUser) {
-        // Registration successful move to login
         navigate("/login");
       }
     } catch (err) {
@@ -110,18 +108,14 @@ export function RegisterPage({ onBack }) {
         setIsGoogleLoading(true);
         setError("");
 
-        // Send the authorization code to your backend
         const response = await axios.post(`${import.meta.env.VITE_API_URL}/auth/google`, {
           code: codeResponse.code
         });
 
-        const { token, message, user } = response.data;
+        const { token } = response.data;
         if (!token) throw new Error("Google registration failed. No token returned.");
 
-        // Store the JWT token from your backend
         localStorage.setItem("jwtToken", token);
-
-        // Navigate to dashboard
         navigate("/dashboard", { replace: true });
       } catch (err) {
         console.error("Google registration error:", err);
@@ -141,12 +135,11 @@ export function RegisterPage({ onBack }) {
   const linkedInLogin = () => {
     const clientId = '86yjmxh0g4fzdk';
     const redirectUri = encodeURIComponent(window.location.origin + '/auth/linkedin/callback');
-    // CORRECTED: Use OpenID Connect scopes
     const scope = encodeURIComponent('openid profile email');
     const state = Math.random().toString(36).substring(7);
-    
+
     const linkedInAuthUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}`;
-    
+
     sessionStorage.setItem('linkedin_state', state);
     window.location.href = linkedInAuthUrl;
   };
@@ -186,39 +179,74 @@ export function RegisterPage({ onBack }) {
 
   return (
     <div className="min-h-screen bg-background p-4 flex items-center justify-center">
+      {/* === animations copied from LoginPage.jsx === */}
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideInFromTop { from { opacity: 0; transform: translateY(-0.5rem); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideInFromBottom { from { opacity: 0; transform: translateY(0.5rem); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideInFromBottomLarge { from { opacity: 0; transform: translateY(1rem); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideInFromLeft { from { opacity: 0; transform: translateX(-0.5rem); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        .animate-slide-in-top { animation: slideInFromTop 0.5s ease-out forwards; }
+        .animate-slide-in-bottom { animation: slideInFromBottom 0.5s ease-out forwards; }
+        .animate-slide-in-bottom-large { animation: slideInFromBottomLarge 0.7s ease-out forwards; }
+        .animate-slide-in-left { animation: slideInFromLeft 0.5s ease-out forwards; }
+        .animate-zoom-in { animation: zoomIn 0.7s ease-out forwards; }
+        .animate-spin { animation: spin 1s linear infinite; }
+
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
+        .delay-300 { animation-delay: 0.3s; }
+        .delay-400 { animation-delay: 0.4s; }
+        .delay-500 { animation-delay: 0.5s; }
+        .delay-600 { animation-delay: 0.6s; }
+        .delay-700 { animation-delay: 0.7s; }
+        .delay-800 { animation-delay: 0.8s; }
+        .delay-900 { animation-delay: 0.9s; }
+        .delay-1000 { animation-delay: 1s; }
+        .delay-1100 { animation-delay: 1.1s; }
+
+        .opacity-0 { opacity: 0; }
+      `}</style>
+
       <div className="w-full max-w-md">
         {/* Back button */}
-        <div className="mb-4">
+        <div className="mb-4 opacity-0 animate-slide-in-top">
           <Link to="/landing-page">
             <Button
               variant="ghost"
               size="sm"
               onClick={onBack}
-              className="inline-flex items-center gap-2 px-2"
+              className="inline-flex items-center gap-2 px-2 transition-all duration-300 hover:gap-3 hover:pl-1"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4 transition-transform duration-300" />
               Back
             </Button>
           </Link>
         </div>
 
-        <Card className="border-border">
+        <Card className="border-border opacity-0 animate-slide-in-bottom-large delay-200 shadow-xl hover:shadow-2xl transition-shadow duration-500">
           <CardHeader className="space-y-1 text-center mb-2">
-            <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-2xl font-bold opacity-0 animate-slide-in-top delay-300">
+              Create Account
+            </CardTitle>
+            <CardDescription className="opacity-0 animate-slide-in-top delay-400">
               Start your AI-powered career journey today
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
-                <Alert variant="destructive">
+                <Alert variant="destructive" className="animate-slide-in-top">
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
+                <div className="space-y-2 opacity-0 animate-slide-in-left delay-500">
                   <Label>
                     First Name <span className="text-red-500">*</span>
                   </Label>
@@ -229,6 +257,7 @@ export function RegisterPage({ onBack }) {
                       handleInputChange("firstName", e.target.value)
                     }
                     disabled={isLoading || isGoogleLoading}
+                    className="transition-all duration-300 focus:scale-[1.01] focus:shadow-lg"
                   />
                   {validation.firstName && (
                     <p className="text-red-500 text-xs">
@@ -236,7 +265,7 @@ export function RegisterPage({ onBack }) {
                     </p>
                   )}
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 opacity-0 animate-slide-in-left delay-600">
                   <Label>
                     Last Name <span className="text-red-500">*</span>
                   </Label>
@@ -247,6 +276,7 @@ export function RegisterPage({ onBack }) {
                       handleInputChange("lastName", e.target.value)
                     }
                     disabled={isLoading || isGoogleLoading}
+                    className="transition-all duration-300 focus:scale-[1.01] focus:shadow-lg"
                   />
                   {validation.lastName && (
                     <p className="text-red-500 text-xs">
@@ -256,7 +286,7 @@ export function RegisterPage({ onBack }) {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 opacity-0 animate-slide-in-left delay-700">
                 <Label>
                   Email <span className="text-red-500">*</span>
                 </Label>
@@ -267,6 +297,7 @@ export function RegisterPage({ onBack }) {
                     handleInputChange("email", e.target.value)
                   }
                   disabled={isLoading || isGoogleLoading}
+                  className="transition-all duration-300 focus:scale-[1.01] focus:shadow-lg"
                 />
                 {validation.email && (
                   <p className="text-red-500 text-xs">{validation.email}</p>
@@ -274,13 +305,13 @@ export function RegisterPage({ onBack }) {
               </div>
 
               {/* Country dropdown */}
-              <div className="space-y-2">
+              <div className="space-y-2 opacity-0 animate-slide-in-left delay-800">
                 <Label>
                   Country <span className="text-red-500">*</span>
                 </Label>
                 <div className="relative">
                   <select
-                    className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition"
+                    className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-300 focus:scale-[1.01] focus:shadow-lg"
                     value={formData.country}
                     onChange={(e) =>
                       handleInputChange("country", e.target.value)
@@ -300,7 +331,7 @@ export function RegisterPage({ onBack }) {
                 )}
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 opacity-0 animate-slide-in-left delay-900">
                 <Label>
                   Password <span className="text-red-500">*</span>
                 </Label>
@@ -312,19 +343,20 @@ export function RegisterPage({ onBack }) {
                       handleInputChange("password", e.target.value)
                     }
                     disabled={isLoading || isGoogleLoading}
+                    className="transition-all duration-300 focus:scale-[1.01] focus:shadow-lg"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent transition-all duration-300 hover:scale-110"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={isLoading || isGoogleLoading}
                   >
                     {!showPassword ? (
-                      <EyeOff className="h-4 w-4" />
+                      <EyeOff className="h-4 w-4 transition-transform duration-300" />
                     ) : (
-                      <Eye className="h-4 w-4" />
+                      <Eye className="h-4 w-4 transition-transform duration-300" />
                     )}
                   </Button>
                 </div>
@@ -333,7 +365,7 @@ export function RegisterPage({ onBack }) {
                 )}
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 opacity-0 animate-slide-in-left delay-1000">
                 <Label>
                   Confirm Password <span className="text-red-500">*</span>
                 </Label>
@@ -345,21 +377,22 @@ export function RegisterPage({ onBack }) {
                       handleInputChange("confirmPassword", e.target.value)
                     }
                     disabled={isLoading || isGoogleLoading}
+                    className="transition-all duration-300 focus:scale-[1.01] focus:shadow-lg"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent transition-all duration-300 hover:scale-110"
                     onClick={() =>
                       setShowConfirmPassword(!showConfirmPassword)
                     }
                     disabled={isLoading || isGoogleLoading}
                   >
                     {!showConfirmPassword ? (
-                      <EyeOff className="h-4 w-4" />
+                      <EyeOff className="h-4 w-4 transition-transform duration-300" />
                     ) : (
-                      <Eye className="h-4 w-4" />
+                      <Eye className="h-4 w-4 transition-transform duration-300" />
                     )}
                   </Button>
                 </div>
@@ -370,9 +403,9 @@ export function RegisterPage({ onBack }) {
                 )}
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full" 
+              <Button
+                type="submit"
+                className="w-full opacity-0 animate-slide-in-bottom delay-1100 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98]"
                 disabled={isLoading || isGoogleLoading}
               >
                 {isLoading ? "Creating Account..." : "Create Account"}
@@ -380,7 +413,7 @@ export function RegisterPage({ onBack }) {
             </form>
 
             {/* Divider */}
-            <div className="flex items-center my-6 mt-4">
+            <div className="flex items-center my-6 mt-4 mb-2 opacity-0 animate-fade-in delay-800">
               <div className="flex-1 h-px bg-border" />
               <span className="px-3 text-xs text-muted-foreground">or</span>
               <div className="flex-1 h-px bg-border" />
@@ -392,7 +425,7 @@ export function RegisterPage({ onBack }) {
                 type="button"
                 onClick={() => registerWithGoogle()}
                 disabled={isGoogleLoading || isLoading}
-                className="w-full flex items-center justify-center gap-3 bg-primary text-white hover:opacity-90"
+                className="w-full flex items-center justify-center gap-3 bg-primary text-white hover:opacity-90 opacity-0 animate-slide-in-bottom delay-900 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98]"
               >
                 {isGoogleLoading ? "Connecting..." : <GoogleIcon className="h-5 w-5" />}
                 <span>{isGoogleLoading ? "Connecting..." : "Continue with Google"}</span>
@@ -402,20 +435,20 @@ export function RegisterPage({ onBack }) {
                 type="button"
                 onClick={linkedInLogin}
                 disabled={isGoogleLoading || isLoading}
-                className="w-full flex items-center justify-center gap-3 bg-[#0077B5] text-white hover:bg-[#005885]"
+                className="w-full flex items-center justify-center gap-3 bg-[#0077B5] text-white hover:bg-[#005885] opacity-0 animate-slide-in-bottom delay-1000 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98]"
               >
                 <LinkedInIcon className="h-5 w-5" />
                 <span>Continue with LinkedIn</span>
               </Button>
             </div>
 
-            <div className="mt-6 text-center">
+            <div className="mt-6 text-center opacity-0 animate-fade-in delay-1100">
               <p className="text-sm text-muted-foreground">
                 Already have an account?{" "}
                 <Link to="/login">
                   <Button
                     variant="link"
-                    className="p-0 h-auto font-normal text-primary"
+                    className="p-0 h-auto font-normal text-primary hover:text-primary/80 transition-all duration-300 hover:underline hover:underline-offset-4"
                   >
                     Sign in
                   </Button>

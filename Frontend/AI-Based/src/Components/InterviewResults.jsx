@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, RefreshCw, Flag, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, RefreshCw, Flag, CheckCircle2, XCircle, Sparkles, TrendingUp, Target } from "lucide-react";
 import axios from "axios";
 
 // --- Inline UI components ---
@@ -49,13 +49,54 @@ const Progress = ({ className = "", value = 0, ...props }) => (
 const Separator = ({ className = "", orientation = "horizontal", ...props }) => (
   <div className={`shrink-0 bg-border ${orientation === "horizontal" ? "h-[1px] w-full" : "h-full w-[1px]"} ${className}`} {...props} />
 );
-// --- /UI ---
+
+// Animation styles component
+const AnimationStyles = () => (
+  <style>{`
+    @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+    @keyframes slideInFromTop { from { opacity: 0; transform: translateY(-1rem) } to { opacity: 1; transform: translateY(0) } }
+    @keyframes scaleIn { from { opacity: 0; transform: scale(0.97) } to { opacity: 1; transform: scale(1) } }
+    @keyframes float { 0%,100% { transform: translateY(0px) } 50% { transform: translateY(-8px) } }
+    @keyframes shimmer { 0% { background-position: -1000px 0; } 100% { background-position: 1000px 0; } }
+
+    .animate-fade-in { animation: fadeIn .6s ease-out forwards }
+    .animate-slide-in-top { animation: slideInFromTop .6s ease-out forwards }
+    .animate-scale-in { animation: scaleIn .45s ease-out forwards }
+    .animate-float { animation: float 3s ease-in-out infinite }
+
+    .calm-bg {
+      background: radial-gradient(1200px 600px at 0% 0%, rgba(34,211,238,0.08), transparent 60%),
+                  radial-gradient(1000px 500px at 100% 20%, rgba(139,92,246,0.10), transparent 55%),
+                  radial-gradient(900px 500px at 50% 100%, rgba(236,72,153,0.08), transparent 50%);
+    }
+    .glass {
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .action-card { 
+      transition: transform .35s cubic-bezier(.22,.61,.36,1), box-shadow .35s, background .35s; 
+    }
+    .action-card:hover { 
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
+    .gradient-title {
+      background: linear-gradient(135deg, #8b5cf6 0%, #22d3ee 50%, #ec4899 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .score-glow {
+      text-shadow: 0 0 30px rgba(139, 92, 246, 0.5);
+    }
+  `}</style>
+);
 
 // Map DB -> UI
 function mapDbResultToUi(db) {
   if (!db) return null;
 
-  // If feedbackJson were present (Json column), you could prefer it here.
   const fx = db.feedbackJson && typeof db.feedbackJson === "object" ? db.feedbackJson : null;
 
   if (fx) {
@@ -75,7 +116,6 @@ function mapDbResultToUi(db) {
     };
   }
 
-  // Fallback: build from analysis rows
   const jobRole = db?.interviewJobRole?.jobRoleName || "Role";
   const list = Array.isArray(db?.interviewAnalysis) ? db.interviewAnalysis : [];
 
@@ -118,11 +158,11 @@ function mapDbResultToUi(db) {
 }
 
 const gradeBadge = (score) => {
-  if (score >= 90) return { text: "Outstanding", cls: "bg-emerald-900/20 text-emerald-400 border-emerald-800" };
-  if (score >= 80) return { text: "Excellent", cls: "bg-green-900/20 text-green-400 border-green-800" };
-  if (score >= 70) return { text: "Good", cls: "bg-blue-900/20 text-blue-400 border-blue-800" };
-  if (score >= 60) return { text: "Fair", cls: "bg-yellow-900/20 text-yellow-400 border-yellow-800" };
-  return { text: "Needs Improvement", cls: "bg-red-900/20 text-red-400 border-red-800" };
+  if (score >= 90) return { text: "Outstanding", cls: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" };
+  if (score >= 80) return { text: "Excellent", cls: "bg-green-500/20 text-green-300 border-green-500/40" };
+  if (score >= 70) return { text: "Good", cls: "bg-blue-500/20 text-blue-300 border-blue-500/40" };
+  if (score >= 60) return { text: "Fair", cls: "bg-yellow-500/20 text-yellow-300 border-yellow-500/40" };
+  return { text: "Needs Improvement", cls: "bg-red-500/20 text-red-300 border-red-500/40" };
 };
 
 export function InterviewResults() {
@@ -148,13 +188,9 @@ export function InterviewResults() {
         });
 
         if (abort) return;
-
-        // Axios: data is in r.data
         setData(mapDbResultToUi(r.data));
       } catch (e) {
         if (abort) return;
-
-        // Handle 404 / other errors gracefully
         const status = e?.response?.status;
         if (status === 404) {
           console.error("Interview results not found");
@@ -167,7 +203,6 @@ export function InterviewResults() {
       }
     }
 
-    // Prefer in-memory feedback (from evaluation flow)
     if (incomingFeedback && typeof incomingFeedback === "object") {
       setData(incomingFeedback);
       return;
@@ -188,244 +223,286 @@ export function InterviewResults() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-4 md:p-8" style={{ backgroundColor: '#111827' }}>
-        <div className="max-w-4xl mx-auto space-y-8 text-center text-slate-300">Loading results…</div>
-      </div>
+      <>
+        <AnimationStyles />
+        <div className="min-h-screen p-4 md:p-8 calm-bg">
+          <div className="max-w-5xl mx-auto space-y-8 text-center animate-fade-in">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <p className="text-muted-foreground">Loading your results…</p>
+          </div>
+        </div>
+      </>
     );
   }
 
   if (!data) {
     return (
-      <div className="min-h-screen p-4 md:p-8" style={{ backgroundColor: '#111827' }}>
-        <div className="max-w-4xl mx-auto space-y-8">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="hover:bg-slate-700/50 text-slate-300 hover:text-white">
-              <ArrowLeft className="h-4 w-4 mr-2" /> Back
-            </Button>
-            <h1 className="text-3xl font-bold text-white">Interview Results</h1>
-          </div>
-          <Card className="shadow-2xl border-slate-700 bg-slate-800/90 backdrop-blur-sm">
-            <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-6">
-                <RefreshCw className="h-8 w-8 text-slate-400" />
-              </div>
-              <h3 className="text-xl font-semibold mb-4 text-white">No Results Found</h3>
-              <p className="text-slate-400 mb-8 max-w-md mx-auto">
-                Run a mock interview, or open results from your interview history.
-              </p>
-              <Button onClick={() => navigate("/mock-interview-setup")} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 shadow-lg">
-                <RefreshCw className="h-4 w-4 mr-2" /> Start New Interview
+      <>
+        <AnimationStyles />
+        <div className="min-h-screen p-4 md:p-8 calm-bg">
+          <div className="max-w-5xl mx-auto space-y-8">
+            <div className="flex items-center gap-4 opacity-0 animate-slide-in-top">
+              <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="action-card">
+                <ArrowLeft className="h-4 w-4 mr-2" /> Back
               </Button>
-            </CardContent>
-          </Card>
+              <h1 className="text-3xl font-bold gradient-title">Interview Results</h1>
+            </div>
+            <Card className="glass action-card opacity-0 animate-scale-in">
+              <CardContent className="p-8 text-center">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 animate-float">
+                  <RefreshCw className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold mb-4">No Results Found</h3>
+                <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+                  Run a mock interview, or open results from your interview history.
+                </p>
+                <Button onClick={() => navigate("/mock-interview-setup")} className="action-card">
+                  <RefreshCw className="h-4 w-4 mr-2" /> Start New Interview
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-8" style={{ backgroundColor: '#111827' }}>
-      <div className="max-w-5xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="hover:bg-slate-700/50 text-slate-300 hover:text-white">
-              <ArrowLeft className="h-4 w-4 mr-2" /> Back
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-white">Interview Results</h1>
-              <p className="text-lg text-slate-400 mt-1">{role}</p>
+    <>
+      <AnimationStyles />
+      <div className="min-h-screen p-4 md:p-8 calm-bg">
+        <div className="max-w-5xl mx-auto space-y-8">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 opacity-0 animate-slide-in-top">
+            <div className="flex items-center gap-4 mt-2">
+              <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="action-card">
+                <ArrowLeft className="h-4 w-4 mr-2" /> Back
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold gradient-title">Interview Results</h1>
+                <p className="text-lg text-muted-foreground mt-1 flex items-center gap-2">
+                  <Target className="h-4 w-4" />
+                  {role}
+                </p>
+              </div>
             </div>
+            
           </div>
-          <Button size="lg" onClick={() => navigate("/mock-interview-setup")} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 shadow-lg">
-            <RefreshCw className="h-4 w-4 mr-2" /> New Interview
-          </Button>
-        </div>
 
-        {/* Overall Score Card */}
-        <Card className="shadow-2xl border-slate-700 bg-slate-800/90 backdrop-blur-sm overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 h-2" />
-          <CardContent className="p-8">
-            <div className="flex flex-col lg:flex-row lg:items-center gap-8 mb-8">
-              <div className="flex items-center gap-6">
-                <div className="text-center">
-                  <div className="text-6xl font-black text-white leading-none mb-2">
-                    {overall.totalScore ?? "--"}
-                  </div>
-                  <div className="text-sm text-slate-400 uppercase tracking-wide font-medium">Overall Score</div>
-                </div>
-                <div className="space-y-3">
-                  <Badge variant="secondary" className={`${badge.cls} border px-4 py-2 font-medium`}>{badge.text}</Badge>
-                  <div className="w-48"><Progress value={overall.totalScore ?? 0} className="h-3 bg-slate-700" /></div>
-                </div>
-              </div>
-              <div className="flex-1 lg:pl-8">
-                <h3 className="font-semibold text-white mb-3">Performance Summary</h3>
-                <p className="text-slate-300 leading-relaxed">{overall.summary || "No overall summary provided."}</p>
-              </div>
-            </div>
-
-            <Separator className="my-8 bg-slate-600" />
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-                  <h4 className="font-semibold text-white">Top Strengths</h4>
-                </div>
-                <div className="bg-emerald-900/20 rounded-lg p-6 border border-emerald-800/30">
-                  {(overall.strengths?.length ? (
-                    <ul className="space-y-3">
-                      {overall.strengths.map((s, i) => (
-                        <li key={i} className="flex items-start gap-3 text-slate-300">
-                          <div className="w-2 h-2 bg-emerald-400 rounded-full mt-2.5 flex-shrink-0" />
-                          <span>{s}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-slate-500 italic">No specific strengths identified</p>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <XCircle className="h-5 w-5 text-yellow-400" />
-                  <h4 className="font-semibold text-white">Areas for Improvement</h4>
-                </div>
-                <div className="bg-yellow-900/20 rounded-lg p-6 border border-yellow-800/30">
-                  {(overall.improvements?.length ? (
-                    <ul className="space-y-3">
-                      {overall.improvements.map((s, i) => (
-                        <li key={i} className="flex items-start gap-3 text-slate-300">
-                          <div className="w-2 h-2 bg-yellow-400 rounded-full mt-2.5 flex-shrink-0" />
-                          <span>{s}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-slate-500 italic">No specific improvements suggested</p>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Per-Question Feedback */}
-        <Card className="shadow-2xl border-slate-700 bg-slate-800/90 backdrop-blur-sm">
-          <CardHeader className="pb-6">
-            <CardTitle className="text-xl text-white flex items-center gap-2">
-              <div className="w-1 h-6 bg-blue-600 rounded-full" /> Question-by-Question Analysis
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {(!perQuestion || perQuestion.length === 0) && (
-              <div className="text-center py-12">
-                <p className="text-slate-500">No question-level feedback provided.</p>
-              </div>
-            )}
-
-            {perQuestion?.map((q, idx) => {
-              const qb = gradeBadge(q.score ?? 0);
-              const hasFlags = q?.flags?.off_topic || q?.flags?.profanity;
-              return (
-                <div key={q.id || idx} className="bg-slate-700/30 rounded-xl border border-slate-600 p-6 hover:shadow-lg hover:bg-slate-700/40 transition-all">
-                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-6">
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-white mb-2">Question {idx + 1}</h4>
-                      <p className="text-slate-300">{q.question || "—"}</p>
+          {/* Overall Score Card */}
+          <Card className="glass action-card opacity-0 animate-scale-in overflow-hidden" style={{ animationDelay: '0.1s' }}>
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-blue-500/10 to-pink-500/10 pointer-events-none" />
+            <CardContent className="p-8 relative">
+              <div className="flex flex-col lg:flex-row lg:items-center gap-8 mb-8 mt-4">
+                <div className="flex items-center gap-6">
+                  <div className="text-center">
+                    <div className="text-7xl font-black score-glow leading-none mb-2">
+                      {overall.totalScore ?? "--"}
                     </div>
-                    <div className="flex items-center gap-4 lg:text-right">
-                      <div>
-                        <div className="text-3xl font-bold text-white">{q.score ?? "--"}</div>
-                        <div className="text-sm text-slate-400">Score</div>
+                    <div className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Overall Score</div>
+                  </div>
+                  <div className="space-y-3">
+                    <Badge variant="secondary" className={`${badge.cls} border px-4 py-2 font-medium text-sm`}>
+                      {badge.text}
+                    </Badge>
+                    <div className="w-48">
+                      <Progress value={overall.totalScore ?? 0} className="h-3" />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex-1 lg:pl-8 lg:border-l border-border/30">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles className="h-5 w-5 text-primary animate-float" />
+                    <h3 className="font-semibold">Performance Summary</h3>
+                  </div>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {overall.summary || "Great job completing the interview! Review the detailed feedback below to understand your performance."}
+                  </p>
+                </div>
+              </div>
+
+              <Separator className="my-8 bg-border/30" />
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                    </div>
+                    <h4 className="font-semibold">Top Strengths</h4>
+                  </div>
+                  <div className="glass rounded-xl p-6 border border-emerald-500/20">
+                    {(overall.strengths?.length ? (
+                      <ul className="space-y-3">
+                        {overall.strengths.map((s, i) => (
+                          <li key={i} className="flex items-start gap-3 text-muted-foreground">
+                            <div className="w-2 h-2 bg-emerald-400 rounded-full mt-2 flex-shrink-0" />
+                            <span>{s}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-muted-foreground/60 italic">No specific strengths identified</p>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                      <TrendingUp className="h-4 w-4 text-yellow-400" />
+                    </div>
+                    <h4 className="font-semibold">Areas for Improvement</h4>
+                  </div>
+                  <div className="glass rounded-xl p-6 border border-yellow-500/20">
+                    {(overall.improvements?.length ? (
+                      <ul className="space-y-3">
+                        {overall.improvements.map((s, i) => (
+                          <li key={i} className="flex items-start gap-3 text-muted-foreground">
+                            <div className="w-2 h-2 bg-yellow-400 rounded-full mt-2 flex-shrink-0" />
+                            <span>{s}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-muted-foreground/60 italic">No specific improvements suggested</p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Per-Question Feedback */}
+          <Card className="glass action-card opacity-0 animate-scale-in" style={{ animationDelay: '0.2s' }}>
+            <CardHeader className="pb-6">
+              <CardTitle className="text-xl flex items-center gap-3">
+                <div className="w-1 h-7 bg-gradient-to-b from-purple-500 to-blue-500 rounded-full" />
+                Question-by-Question Analysis
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {(!perQuestion || perQuestion.length === 0) && (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">No question-level feedback provided.</p>
+                </div>
+              )}
+
+              {perQuestion?.map((q, idx) => {
+                const qb = gradeBadge(q.score ?? 0);
+                const hasFlags = q?.flags?.off_topic || q?.flags?.profanity;
+                return (
+                  <div 
+                    key={q.id || idx} 
+                    className="glass rounded-xl p-6 action-card"
+                    style={{ animation: 'fadeIn .5s ease-out forwards', animationDelay: `${0.05 * (idx + 1)}s`, opacity: 0 }}
+                  >
+                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-6">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge variant="outline" className="text-xs">Question {idx + 1}</Badge>
+                        </div>
+                        <p className="text-muted-foreground leading-relaxed">{q.question || "—"}</p>
                       </div>
-                      <Badge variant="secondary" className={`${qb.cls} border px-3 py-1`}>{qb.text}</Badge>
+                      <div className="flex items-center gap-4 lg:text-right">
+                        <div>
+                          <div className="text-4xl font-bold score-glow">{q.score ?? "--"}</div>
+                          <div className="text-xs text-muted-foreground">Score</div>
+                        </div>
+                        <Badge variant="secondary" className={`${qb.cls} border px-3 py-1.5 text-xs`}>
+                          {qb.text}
+                        </Badge>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="mb-6"><Progress value={q.score ?? 0} className="h-2 bg-slate-600" /></div>
-
-                  <div className="mb-6">
-                    <h5 className="font-medium text-white mb-3">Answer Analysis</h5>
-                    <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-600">
-                      <p className="text-slate-300 leading-relaxed">{q.answerSummary || "No summary for this answer."}</p>
-                    </div>
-                  </div>
-
-                  {hasFlags && (
                     <div className="mb-6">
-                      <div className="bg-red-900/20 border border-red-800/30 rounded-lg p-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Flag className="h-4 w-4 text-red-400" />
-                          <span className="font-medium text-red-300">Content Flags</span>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {q?.flags?.off_topic && (
-                            <Badge variant="destructive" className="gap-1 bg-red-900/30 text-red-400 border-red-800">
-                              <XCircle className="h-3 w-3" /> Off-topic
-                            </Badge>
-                          )}
-                          {q?.flags?.profanity && (
-                            <Badge variant="destructive" className="gap-1 bg-red-900/30 text-red-400 border-red-800">
-                              <XCircle className="h-3 w-3" /> Profanity
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
+                      <Progress value={q.score ?? 0} className="h-2" />
                     </div>
-                  )}
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div>
-                      <h5 className="font-medium text-white mb-3 flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Strengths
+                    <div className="mb-6">
+                      <h5 className="font-medium mb-3 flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        Answer Analysis
                       </h5>
-                      <div className="bg-emerald-900/20 rounded-lg p-4 border border-emerald-800/30">
-                        {q.strengths?.length ? (
-                          <ul className="space-y-2">
-                            {q.strengths.map((s, i) => (
-                              <li key={i} className="flex items-start gap-2 text-slate-300">
-                                <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mt-2 flex-shrink-0" />
-                                <span className="text-sm">{s}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-slate-500 text-sm italic">No specific strengths identified</p>
-                        )}
+                      <div className="glass rounded-lg p-4 border border-border/30">
+                        <p className="text-muted-foreground leading-relaxed">
+                          {q.answerSummary || "No summary for this answer."}
+                        </p>
                       </div>
                     </div>
 
-                    <div>
-                      <h5 className="font-medium text-white mb-3 flex items-center gap-2">
-                        <XCircle className="h-4 w-4 text-yellow-400" /> Improvements
-                      </h5>
-                      <div className="bg-yellow-900/20 rounded-lg p-4 border border-yellow-800/30">
-                        {q.improvements?.length ? (
-                          <ul className="space-y-2">
-                            {q.improvements.map((s, i) => (
-                              <li key={i} className="flex items-start gap-2 text-slate-300">
-                                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full mt-2 flex-shrink-0" />
-                                <span className="text-sm">{s}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-slate-500 text-sm italic">No specific improvements suggested</p>
-                        )}
+                    {hasFlags && (
+                      <div className="mb-6">
+                        <div className="glass border border-red-500/30 rounded-lg p-4 bg-red-500/5">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Flag className="h-4 w-4 text-red-400" />
+                            <span className="font-medium text-red-300">Content Flags</span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {q?.flags?.off_topic && (
+                              <Badge variant="destructive" className="gap-1 bg-red-500/20 text-red-400 border-red-500/40">
+                                <XCircle className="h-3 w-3" /> Off-topic
+                              </Badge>
+                            )}
+                            {q?.flags?.profanity && (
+                              <Badge variant="destructive" className="gap-1 bg-red-500/20 text-red-400 border-red-500/40">
+                                <XCircle className="h-3 w-3" /> Profanity
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div>
+                        <h5 className="font-medium mb-3 flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Strengths
+                        </h5>
+                        <div className="glass rounded-lg p-4 border border-emerald-500/20">
+                          {q.strengths?.length ? (
+                            <ul className="space-y-2">
+                              {q.strengths.map((s, i) => (
+                                <li key={i} className="flex items-start gap-2 text-muted-foreground">
+                                  <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mt-2 flex-shrink-0" />
+                                  <span className="text-sm">{s}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-muted-foreground/60 text-sm italic">No specific strengths identified</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h5 className="font-medium mb-3 flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-yellow-400" /> Improvements
+                        </h5>
+                        <div className="glass rounded-lg p-4 border border-yellow-500/20">
+                          {q.improvements?.length ? (
+                            <ul className="space-y-2">
+                              {q.improvements.map((s, i) => (
+                                <li key={i} className="flex items-start gap-2 text-muted-foreground">
+                                  <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full mt-2 flex-shrink-0" />
+                                  <span className="text-sm">{s}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-muted-foreground/60 text-sm italic">No specific improvements suggested</p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
