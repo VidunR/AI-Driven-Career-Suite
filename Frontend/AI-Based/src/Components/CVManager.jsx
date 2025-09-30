@@ -19,6 +19,10 @@ import {
   Trash2,
   Upload,
   AlertTriangle,
+  Plus,
+  Star,
+  FilePlus,
+  Sparkles,
 } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
@@ -64,13 +68,13 @@ export function CVManager() {
     fetchCVs();
   }, []);
 
-  // ----- Delete (no window.confirm; modal handles confirmation) -----
+  // ----- Delete -----
   const handleDeleteCV = async (cvId) => {
     try {
       await axios.delete(`${API_BASE}/cvmanager/${cvId}`, {
         headers: { ...authHeaders() },
       });
-      toast.success("CV deleted.");
+      toast.success("CV deleted successfully.");
       setCvs((prev) => prev.filter((c) => c.cvId !== cvId));
     } catch (err) {
       console.error("Delete failed:", err);
@@ -94,7 +98,7 @@ export function CVManager() {
     if (id) await handleDeleteCV(id);
   };
 
-  // (Optional: local “default” toggle only)
+  // Set default CV
   const handleSetDefault = (cvId) => {
     setCvs((prev) =>
       prev.map((cv) => ({
@@ -110,7 +114,7 @@ export function CVManager() {
 
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
-    e.target.value = ""; // allow re-selecting the same file later
+    e.target.value = "";
     if (!file) return;
 
     const lower = file.name.toLowerCase();
@@ -124,7 +128,7 @@ export function CVManager() {
     }
 
     const form = new FormData();
-    form.append("file", file); // backend multer expects field "file"
+    form.append("file", file);
     form.append("cvName", file.name.replace(/\.[^.]+$/, ""));
 
     try {
@@ -132,11 +136,10 @@ export function CVManager() {
       await axios.post(`${API_BASE}/cvmanager/upload`, form, {
         headers: {
           ...authHeaders(),
-          // Let the browser set correct boundary
         },
       });
       toast.success("CV uploaded successfully.");
-      fetchCVs(); // reload list
+      fetchCVs();
     } catch (err) {
       console.error("Upload failed:", err);
       const msg =
@@ -161,7 +164,6 @@ export function CVManager() {
         return;
       }
 
-      // build full path to the file
       const href = `${API_BASE}/${cvFilepath}`;
       window.open(href, "_blank", "noopener,noreferrer");
     } catch (err) {
@@ -179,193 +181,388 @@ export function CVManager() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-screen">
         <div className="text-center space-y-4">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-muted-foreground">Loading CVs...</p>
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-muted-foreground text-lg font-medium">Loading your CVs...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">CV Manager</h1>
-          <p className="text-muted-foreground">
-            Manage your CVs and track them easily
-          </p>
-        </div>
+    <div className="calm-bg">
+      <div className="p-6 space-y-8 max-w-7xl mx-auto">
+        <style>{`
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          
+          @keyframes slideInFromTop {
+            from { opacity: 0; transform: translateY(-1rem); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          
+          @keyframes slideInFromBottom {
+            from { opacity: 0; transform: translateY(1rem); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          
+          @keyframes slideInFromLeft {
+            from { opacity: 0; transform: translateX(-1rem); }
+            to { opacity: 1; transform: translateX(0); }
+          }
+          
+          @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+          }
+          
+          @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+          }
+          
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+          }
+          
+          .animate-fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+          }
+          
+          .animate-slide-in-top {
+            animation: slideInFromTop 0.6s ease-out forwards;
+          }
+          
+          .animate-slide-in-bottom {
+            animation: slideInFromBottom 0.6s ease-out forwards;
+          }
+          
+          .animate-slide-in-left {
+            animation: slideInFromLeft 0.6s ease-out forwards;
+          }
+          
+          .animate-scale-in {
+            animation: scaleIn 0.5s ease-out forwards;
+          }
+          
+          .opacity-0 { opacity: 0; }
+          
+          .delay-100 { animation-delay: 0.1s; }
+          .delay-200 { animation-delay: 0.2s; }
+          .delay-300 { animation-delay: 0.3s; }
+          .delay-400 { animation-delay: 0.4s; }
+          .delay-500 { animation-delay: 0.5s; }
+          
+          .cv-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+          }
+          
+          .cv-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+              90deg,
+              transparent,
+              rgba(255, 255, 255, 0.1),
+              transparent
+            );
+            transition: left 0.5s;
+          }
+          
+          .cv-card:hover::before {
+            left: 100%;
+          }
+          
+          .cv-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          }
 
-        {/* Actions: Create + Upload */}
-        <div className="flex items-center gap-2">
-          <Button
-            className="flex items-center gap-2"
-            onClick={() => navigate("/cv-builder")}
-          >
-            Create New CV
-          </Button>
+          .calm-bg {
+            background: radial-gradient(1200px 600px at 0% 0%, rgba(34,211,238,0.08), transparent 60%),
+                        radial-gradient(1000px 500px at 100% 20%, rgba(139,92,246,0.10), transparent 55%),
+                        radial-gradient(900px 500px at 50% 100%, rgba(236,72,153,0.08), transparent 50%);
+            min-height: 100vh;
+          }
+          
+          .upload-area {
+            transition: all 0.3s ease;
+          }
+          
+          .upload-area:hover {
+            transform: scale(1.02);
+          }
+          
+          .modal-backdrop {
+            animation: fadeIn 0.2s ease-out;
+          }
+          
+          .modal-content {
+            animation: scaleIn 0.3s ease-out;
+          }
+          
+          .empty-state {
+            animation: fadeIn 0.8s ease-out;
+          }
+        `}</style>
 
-          <Button
-            variant="outline"
-            className="flex items-center gap-2"
-            onClick={handleUploadClick}
-            disabled={isUploading}
-          >
-            <Upload className="w-4 h-4" />
-            {isUploading ? "Uploading..." : "Upload CV"}
-          </Button>
-
-          {/* Hidden input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-        </div>
-      </div>
-
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
-        <Input
-          placeholder="Search CVs..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
-      </div>
-
-      {/* CV Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredCVs.map((cv) => (
-          <Card
-            key={cv.cvId}
-            className="border-border hover:shadow-lg transition-shadow"
-          >
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <CardTitle className="text-lg truncate">
-                    {cv.cvName || "CV"}
-                  </CardTitle>
-                  <CardDescription className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Calendar className="w-4 h-4" />
-                    {cv.modifiedDate
-                      ? new Date(cv.modifiedDate).toLocaleDateString()
-                      : "—"}
-                  </CardDescription>
+        {/* Header */}
+        <div className="opacity-0 animate-slide-in-top">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <FileText className="w-6 h-6 text-primary" />
                 </div>
-
-                {cv.isDefault && (
-                  <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/20">
-                    Default
-                  </Badge>
-                )}
+                <h1 className="text-4xl font-bold">CV Manager</h1>
               </div>
-            </CardHeader>
-
-            <CardContent className="space-y-4">
-              {/* Actions */}
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 flex items-center justify-center gap-2"
-                  onClick={() => handleView(cv)}
-                >
-                  <Eye className="w-4 h-4" /> View
-                </Button>
-
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="flex-1 flex items-center justify-center text-destructive hover:text-destructive gap-2"
-                  onClick={() => openDeleteConfirm(cv)}
-                >
-                  <Trash2 className="w-4 h-4" /> Delete
-                </Button>
-              </div>
-
-              {!cv.isDefault && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="w-full text-primary"
-                  onClick={() => handleSetDefault(cv.cvId)}
-                >
-                  Set as Default
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {filteredCVs.length === 0 && (
-        <div className="text-center py-12">
-          <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium mb-2">No CVs found</h3>
-          <p className="text-muted-foreground mb-4">
-            {searchTerm
-              ? "Try adjusting your search."
-              : "Create your first CV to get started."}
-          </p>
-        </div>
-      )}
-
-      {/* Confirm Delete Modal */}
-      {confirmOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={closeDeleteConfirm}
-          />
-          <div className="relative bg-background dark:bg-gray-900 text-white rounded-lg shadow-lg border border-gray-700 max-w-md w-full mx-4 p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              <h2 className="text-lg font-semibold text-red-600 dark:text-red-400">
-                Delete CV?
-              </h2>
-            </div>
-
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
-              You are about to permanently delete{" "}
-              <span className="font-medium">{confirmTarget.name}</span>.
-            </p>
-
-            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-md border border-red-200 dark:border-red-800 mb-6">
-              <p className="text-sm text-red-800 dark:text-red-300 font-medium">
-                ⚠️ This action is irreversible
-              </p>
-              <p className="text-sm text-red-700 dark:text-red-400 mt-1">
-                Once deleted, your CV will be permanently deleted.
+              <p className="text-muted-foreground text-lg">
+                Manage and organize all your professional CVs in one place
               </p>
             </div>
 
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={closeDeleteConfirm}>
-                Cancel
-              </Button>
+            {/* Actions: Create + Upload */}
+            <div className="flex items-center gap-3">
               <Button
-                variant="destructive"
-                className="bg-red-600 hover:bg-red-700"
-                onClick={confirmDelete}
+                className="flex items-center gap-2 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                onClick={() => navigate("/cv-builder")}
               >
-                Delete
+                <Plus className="w-4 h-4" />
+                Create New CV
               </Button>
+
+              <Button
+                variant="outline"
+                className="flex items-center gap-2 upload-area hover:border-primary hover:text-primary"
+                onClick={handleUploadClick}
+                disabled={isUploading}
+              >
+                <Upload className="w-4 h-4" />
+                {isUploading ? (
+                  <>
+                    <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                    Uploading...
+                  </>
+                ) : (
+                  "Upload CV"
+                )}
+              </Button>
+
+              {/* Hidden input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                onChange={handleFileChange}
+                className="hidden"
+              />
             </div>
           </div>
         </div>
-      )}
+
+        {/* Search */}
+        <div className="opacity-0 animate-slide-in-top delay-100">
+          <div className="relative max-w-md">
+            <Input
+              placeholder=" Search your CVs..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-12 h-12 text-base shadow-sm hover:shadow-md transition-shadow duration-300"
+            />
+          </div>
+        </div>
+
+        
+        {/* CV Grid */}
+        {filteredCVs.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredCVs.map((cv, index) => (
+              <Card
+                key={cv.cvId}
+                className={`border-border cv-card opacity-0 animate-scale-in shadow-md`}
+                style={{ animationDelay: `${0.3 + index * 0.1}s` }}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="p-1.5 bg-primary/10 rounded">
+                          <FileText className="w-4 h-4 text-primary" />
+                        </div>
+                        {cv.isDefault && (
+                          <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-sm">
+                            <Star className="w-3 h-3 mr-1" />
+                            Default
+                          </Badge>
+                        )}
+                      </div>
+                      <CardTitle className="text-lg truncate font-bold">
+                        {cv.cvName || "Untitled CV"}
+                      </CardTitle>
+                      <CardDescription className="text-sm text-muted-foreground flex items-center gap-1.5 mt-2">
+                        <Calendar className="w-3.5 h-3.5" />
+                        {cv.modifiedDate
+                          ? new Date(cv.modifiedDate).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })
+                          : "No date"}
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="space-y-3">
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 flex items-center justify-center gap-2 hover:bg-primary/10 hover:text-primary hover:border-primary transition-all duration-300"
+                      onClick={() => handleView(cv)}
+                    >
+                      <Eye className="w-4 h-4" /> View
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 flex items-center justify-center text-destructive hover:bg-destructive/10 hover:border-destructive transition-all duration-300"
+                      onClick={() => openDeleteConfirm(cv)}
+                    >
+                      <Trash2 className="w-4 h-4" /> Delete
+                    </Button>
+                  </div>
+
+                  {!cv.isDefault && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="w-full text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950 transition-all duration-300"
+                      onClick={() => handleSetDefault(cv.cvId)}
+                    >
+                      <Star className="w-4 h-4 mr-2" />
+                      Set as Default
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state text-center py-16">
+            <div className="max-w-md mx-auto space-y-6">
+              <div className="relative">
+                <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                  <FilePlus className="w-12 h-12 text-primary" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bold">
+                  {searchTerm ? "No CVs found" : "No CVs yet"}
+                </h3>
+                <p className="text-muted-foreground text-lg">
+                  {searchTerm
+                    ? "Try adjusting your search terms."
+                    : "Create your first professional CV to get started on your career journey."}
+                </p>
+              </div>
+              {!searchTerm && (
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button
+                    size="lg"
+                    className="gap-2 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                    onClick={() => navigate("/cv-builder")}
+                  >
+                    <Plus className="w-5 h-5" />
+                    Create Your First CV
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="gap-2 hover:border-primary hover:text-primary"
+                    onClick={handleUploadClick}
+                  >
+                    <Upload className="w-5 h-5" />
+                    Upload Existing CV
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Confirm Delete Modal */}
+        {confirmOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={closeDeleteConfirm}
+            />
+            <div className="relative bg-background rounded-2xl shadow-2xl border border-border max-w-md w-full mx-4 p-6 modal-content">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-red-500/10 rounded-lg">
+                  <AlertTriangle className="h-6 w-6 text-red-500" />
+                </div>
+                <h2 className="text-xl font-bold text-red-600 dark:text-red-400">
+                  Delete CV?
+                </h2>
+              </div>
+
+              <p className="text-muted-foreground mb-4 text-base">
+                You are about to permanently delete{" "}
+                <span className="font-semibold text-foreground">
+                  {confirmTarget.name}
+                </span>
+                .
+              </p>
+
+              <div className="bg-red-50 dark:bg-red-950/30 p-4 rounded-lg border border-red-200 dark:border-red-900 mb-6">
+                <p className="text-sm text-red-800 dark:text-red-300 font-semibold flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  This action cannot be undone
+                </p>
+                <p className="text-sm text-red-700 dark:text-red-400 mt-2">
+                  Once deleted, this CV will be permanently removed from your account.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={closeDeleteConfirm}
+                  className="hover:bg-muted transition-all duration-300"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="bg-red-600 hover:bg-red-700 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                  onClick={confirmDelete}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete CV
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

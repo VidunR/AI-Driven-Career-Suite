@@ -11,17 +11,16 @@ import {
   Volume2, VolumeX, Play, Pause, Download
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { getQuestionsFor } from '../data/questionBank'; // ← only this
+import { getQuestionsFor } from '../data/questionBank';
 
 export function MockInterviewSession() {
   const [showStartModal, setShowStartModal] = useState(true);
   const [isActive, setIsActive] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [questions, setQuestions] = useState([]);
-  const [timeRemaining, setTimeRemaining] = useState(900);
+  const [timeRemaining, setTimeRemaining] = useState(600);
   const [questionTime, setQuestionTime] = useState(0);
 
-  // mic/webcam state
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [transcribing, setTranscribing] = useState(false);
@@ -41,15 +40,14 @@ export function MockInterviewSession() {
   const questionVideoRef = useRef(null);
 
   const mediaRecorderRef = useRef(null);
-  const audioRecordStreamRef = useRef(null); // audio-only recording
-  const previewStreamRef = useRef(null);     // preview stream
+  const audioRecordStreamRef = useRef(null);
+  const previewStreamRef = useRef(null);
   const chunksRef = useRef([]);
 
   const recordTimerRef = useRef(null);
   const [lastAudioBlob, setLastAudioBlob] = useState(null);
   const [lastAudioUrl, setLastAudioUrl] = useState(null);
 
-  // from setup
   const jobRole = location.state?.jobRole || 'Software Engineer';
   const selectedDifficulty = (() => {
     const raw = String(location.state?.difficulty || 'mid').toLowerCase();
@@ -60,9 +58,8 @@ export function MockInterviewSession() {
 
   const currentQuestion = questions[currentQuestionIndex];
 
-  // Load questions strictly by difficulty
   useEffect(() => {
-    const selected = getQuestionsFor(jobRole, selectedDifficulty, 5); // no mixed mode
+    const selected = getQuestionsFor(jobRole, selectedDifficulty, 5);
     setQuestions(selected);
   }, [jobRole, selectedDifficulty]);
 
@@ -84,10 +81,8 @@ export function MockInterviewSession() {
     return () => clearInterval(h);
   }, [isActive]);
 
-
   useEffect(() => {
     if (isActive && currentQuestion) playQuestionVideo({ resetToStart: true, preferSound: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentQuestionIndex, isActive]);
 
   useEffect(() => {
@@ -98,10 +93,8 @@ export function MockInterviewSession() {
     try {
       let pv = null;
       try {
-        // Try both first
         pv = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       } catch {
-        // Fallback: try only audio
         pv = await navigator.mediaDevices.getUserMedia({ audio: true });
         toast.message("No camera detected. Starting with audio only.");
         setIsWebcamOn(false);
@@ -150,7 +143,6 @@ export function MockInterviewSession() {
     }
   };
 
-  // ===== Recording controls =====
   async function startRecording() {
     if (!audioRecordStreamRef.current) {
       toast.error('Microphone not ready yet.');
@@ -201,7 +193,6 @@ export function MockInterviewSession() {
     }
   }
 
-  // ===== Transcription =====
   async function sendForTranscription(blob) {
     try {
       setTranscribing(true);
@@ -232,13 +223,9 @@ export function MockInterviewSession() {
     }
   }
 
-  // ===== Interview flow =====
-
-  // Ensures we never submit an empty responses array
   const finalizeResponsesBeforeSubmit = () => {
     const trimmed = currentAnswer.trim();
 
-    // If there are no saved responses and no current answer, add a blank entry for the current question
     if (responses.length === 0 && !trimmed && currentQuestion) {
       const entry = {
         questionId: currentQuestion.id,
@@ -251,7 +238,6 @@ export function MockInterviewSession() {
       return [...responses, entry];
     }
 
-    // If there's a current answer not yet saved, append it now
     if (trimmed && currentQuestion) {
       const entry = {
         questionId: currentQuestion.id,
@@ -270,11 +256,10 @@ export function MockInterviewSession() {
   const collectAnswerAndMaybeFinish = () => {
     const trimmed = currentAnswer.trim();
 
-    // Always push an entry (even if the answer is empty) to avoid empty responses[]
     const entry = {
       questionId: currentQuestion.id,
       questionText: currentQuestion.text,
-      answer: trimmed, // can be ""
+      answer: trimmed,
       jobRole,
       secondsSpent: questionTime,
       videoPath: currentQuestion.video,
@@ -291,7 +276,7 @@ export function MockInterviewSession() {
       toast.success('Next question');
     } else {
       console.log("Submitting final responses:", nextResponses);
-      endInterview(nextResponses); // pass final answers
+      endInterview(nextResponses);
     }
   };
 
@@ -307,9 +292,8 @@ export function MockInterviewSession() {
 
     try {
       const token = localStorage.getItem('jwtToken');
-      const difficulty = (location.state?.difficulty || "mid"); // optional but stored on server
+      const difficulty = (location.state?.difficulty || "mid");
 
-      // Log for debugging
       console.log("Final payload:", { jobRole, difficulty, responses: finalResponses });
 
       const r = await fetch("http://localhost:5000/interview/evaluate", {
@@ -329,7 +313,6 @@ export function MockInterviewSession() {
     }
   };
 
-  // End Interview button should also ensure we don't send an empty array
   const handleEndInterviewClick = () => {
     const finalResponses = finalizeResponsesBeforeSubmit();
     endInterview(finalResponses);
@@ -347,270 +330,466 @@ export function MockInterviewSession() {
       : type === 'technical' ? 'bg-green-100 text-green-800'
       : 'bg-blue-100 text-blue-800';
 
-  if (!currentQuestion) return <div className="flex items-center justify-center h-screen">Loading…</div>;
+  if (!currentQuestion) {
+    return (
+      <div className="calm-bg">
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center space-y-4">
+            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <p className="text-muted-foreground text-lg font-medium">Loading interview questions...</p>
+          </div>
+        </div>
+        <style>{`
+          .calm-bg {
+            background: radial-gradient(1200px 600px at 0% 0%, rgba(34,211,238,0.08), transparent 60%),
+                        radial-gradient(1000px 500px at 100% 20%, rgba(139,92,246,0.10), transparent 55%),
+                        radial-gradient(900px 500px at 50% 100%, rgba(236,72,153,0.08), transparent 50%);
+            min-height: 100vh;
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   if (interviewCompleted) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">✅</div>
-          <h2 className="text-2xl font-bold">Interview Completed!</h2>
-          <p className="text-muted-foreground">Generating feedback…</p>
+      <div className="calm-bg">
+        <div className="flex items-center justify-center min-h-screen p-6">
+          <Card className="max-w-md w-full opacity-0 animate-scale-in shadow-2xl">
+            <CardContent className="p-8 text-center space-y-6">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <div className="text-4xl">✅</div>
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-3xl font-bold">Interview Completed!</h2>
+                <p className="text-muted-foreground text-lg">Your AI feedback is being generated...</p>
+              </div>
+              <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+            </CardContent>
+          </Card>
         </div>
+        <style>{`
+          @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+          }
+          .animate-scale-in {
+            animation: scaleIn 0.5s ease-out forwards;
+          }
+          .calm-bg {
+            background: radial-gradient(1200px 600px at 0% 0%, rgba(34,211,238,0.08), transparent 60%),
+                        radial-gradient(1000px 500px at 100% 20%, rgba(139,92,246,0.10), transparent 55%),
+                        radial-gradient(900px 500px at 50% 100%, rgba(236,72,153,0.08), transparent 50%);
+            min-height: 100vh;
+          }
+        `}</style>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex bg-background relative">
-      {/* Left Panel */}
-      <div className="w-1/3 border-r border-border p-4 space-y-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="aspect-video bg-black rounded-lg overflow-hidden relative">
-              {isWebcamOn ? (
-                <video ref={webcamRef} autoPlay muted playsInline className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-white">
-                  <div className="text-center">
-                    <VideoOff className="h-12 w-12 mx-auto mb-2" />
-                    <p>Video Off</p>
+    <div className="calm-bg">
+      <div className="min-h-screen p-6">
+        <style>{`
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          @keyframes slideInFromTop {
+            from { opacity: 0; transform: translateY(-1rem); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes slideInFromLeft {
+            from { opacity: 0; transform: translateX(-1rem); }
+            to { opacity: 1; transform: translateX(0); }
+          }
+          @keyframes slideInFromRight {
+            from { opacity: 0; transform: translateX(1rem); }
+            to { opacity: 1; transform: translateX(0); }
+          }
+          @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+          }
+          
+          .animate-fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+          }
+          .animate-slide-in-top {
+            animation: slideInFromTop 0.6s ease-out forwards;
+          }
+          .animate-slide-in-left {
+            animation: slideInFromLeft 0.6s ease-out forwards;
+          }
+          .animate-slide-in-right {
+            animation: slideInFromRight 0.6s ease-out forwards;
+          }
+          .animate-scale-in {
+            animation: scaleIn 0.5s ease-out forwards;
+          }
+          
+          .opacity-0 { opacity: 0; }
+          .delay-100 { animation-delay: 0.1s; }
+          .delay-200 { animation-delay: 0.2s; }
+          .delay-300 { animation-delay: 0.3s; }
+          
+          .calm-bg {
+            background: radial-gradient(1200px 600px at 0% 0%, rgba(34,211,238,0.08), transparent 60%),
+                        radial-gradient(1000px 500px at 100% 20%, rgba(139,92,246,0.10), transparent 55%),
+                        radial-gradient(900px 500px at 50% 100%, rgba(236,72,153,0.08), transparent 50%);
+            min-height: 100vh;
+          }
+          
+          .video-card {
+            transition: all 0.3s ease;
+          }
+          .video-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+          }
+        `}</style>
+
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="opacity-0 animate-slide-in-top">
+            <Card className="border-border shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <Avatar className="w-14 h-14">
+                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                        <Bot className="h-7 w-7" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h2 className="text-2xl font-bold">AI Mock Interview</h2>
+                      <p className="text-muted-foreground flex items-center gap-2 mt-1">
+                        <span className="font-medium">{jobRole}</span>
+                        <span>•</span>
+                        <Badge className="bg-purple-100 text-purple-800">
+                          {selectedDifficulty === 'entry' ? 'Junior' : selectedDifficulty === 'senior' ? 'Senior' : 'Mid'} Level
+                        </Badge>
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
-              {isRecording && (
-                <div className="absolute top-2 left-2 flex items-center gap-2 bg-red-600 text-white px-2 py-1 rounded text-sm">
-                  <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                  REC&nbsp;{formatTime(recordingSeconds)}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Controls */}
-        <Card>
-          <CardContent className="p-4 space-y-3">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-center">
-              <Button
-                variant="outline"
-                onClick={toggleWebcam}
-                className={`${!isWebcamOn ? 'bg-red-100 text-red-800' : ''} w-full text-sm`}
-              >
-                {isWebcamOn ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
-              </Button>
-
-              <Button
-                variant="default"
-                onClick={startRecording}
-                disabled={isRecording || transcribing}
-                className="w-full bg-rose-600 hover:bg-rose-700 text-white text-sm px-3"
-                title="Start Recording"
-              >
-                <Mic className="h-4 w-4 mr-2" /> Start
-              </Button>
-
-              <Button
-                variant="secondary"
-                onClick={stopRecordingAndTranscribe}
-                disabled={!isRecording}
-                className="w-full bg-gray-100 text-sm px-3 whitespace-normal"
-                title="Stop Recording and Transcribe"
-              >
-                <MicOff className="h-4 w-4 mr-2" /> Stop Recording
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={() => toggleQvMute()}
-                className="w-full"
-              >
-                {qvMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-              </Button>
-
-              <div className="col-span-2 sm:col-span-4 text-xs text-muted-foreground">
-                {transcribing
-                  ? "Transcribing…"
-                  : (isRecording ? "Recording in progress…" : "Tip: Record your answer, then stop to auto-transcribe.")
-                }
-              </div>
-            </div>
-
-            {lastAudioUrl && !isRecording && (
-              <div className="flex items-center justify-between rounded-md border p-2">
-                <audio src={lastAudioUrl} controls className="w-full mr-2" />
-                <a
-                  href={lastAudioUrl}
-                  download={`answer_${currentQuestionIndex + 1}.webm`}
-                  className="inline-flex"
-                  title="Download recording"
-                >
-                  <Button variant="outline" size="sm">
-                    <Download className="h-4 w-4 mr-1" /> Download
+                  <Button 
+                    variant="outline" 
+                    onClick={handleEndInterviewClick}
+                    className="hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-all duration-300"
+                  >
+                    End Interview
                   </Button>
-                </a>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
+          {/* Main Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Sidebar */}
+            <div className="space-y-6 opacity-0 animate-slide-in-left delay-100">
+              {/* Webcam */}
+              <Card className="border-border video-card shadow-lg">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <Video className="w-4 h-4 text-primary" />
+                    Your Video
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <div className="aspect-video bg-black rounded-xl overflow-hidden relative shadow-inner">
+                    {isWebcamOn ? (
+                      <video ref={webcamRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white">
+                        <div className="text-center space-y-3">
+                          <VideoOff className="h-12 w-12 mx-auto opacity-50" />
+                          <p className="font-medium">Camera Off</p>
+                        </div>
+                      </div>
+                    )}
+                    {isRecording && (
+                      <div className="absolute top-3 left-3 flex items-center gap-2 bg-red-600 text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-lg">
+                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                        REC {formatTime(recordingSeconds)}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
-        {/* Timers */}
-        <Card>
-          <CardContent className="p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Total Time</span>
-              <span className="text-lg font-mono">{formatTime(timeRemaining)}</span>
-            </div>
-            <Progress value={(1800 - timeRemaining) / 1800 * 100} className="h-2" />
-            <div className="flex items-center justify-between text-sm">
-              <span>Question Time</span>
-              <span className="font-mono">{formatTime(questionTime)}</span>
-            </div>
-          </CardContent>
-        </Card>
+              {/* Controls */}
+              <Card className="border-border shadow-lg">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold">Recording Controls</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      variant={isWebcamOn ? "outline" : "destructive"}
+                      onClick={toggleWebcam}
+                      className="h-11"
+                    >
+                      {isWebcamOn ? <Video className="h-4 w-4 mr-2" /> : <VideoOff className="h-4 w-4 mr-2" />}
+                      {isWebcamOn ? 'Video' : 'Video Off'}
+                    </Button>
 
-        {/* Progress */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-sm space-y-2">
-              <div className="flex justify-between">
-                <span>Progress</span>
-                <span>{currentQuestionIndex + 1} / {questions.length}</span>
-              </div>
-              <Progress value={(currentQuestionIndex + 1) / questions.length * 100} className="h-2" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                    <Button
+                      variant="outline"
+                      onClick={toggleQvMute}
+                      className="h-11"
+                    >
+                      {qvMuted ? <VolumeX className="h-4 w-4 mr-2" /> : <Volume2 className="h-4 w-4 mr-2" />}
+                      {qvMuted ? 'Unmute' : 'Audio'}
+                    </Button>
+                  </div>
 
-      {/* Right Panel */}
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <div className="border-b border-border p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Avatar><AvatarFallback><Bot className="h-5 w-5" /></AvatarFallback></Avatar>
-              <div>
-                <h2 className="font-semibold">AI Interviewer</h2>
-                <p className="text-sm text-muted-foreground">{jobRole} — Mock Interview</p>
-              </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      onClick={startRecording}
+                      disabled={isRecording || transcribing}
+                      className="h-11 bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      <Mic className="h-4 w-4 mr-2" />
+                      Start
+                    </Button>
+
+                    <Button
+                      variant="secondary"
+                      onClick={stopRecordingAndTranscribe}
+                      disabled={!isRecording}
+                      className="h-11"
+                    >
+                      <MicOff className="h-4 w-4 mr-2" />
+                      Stop
+                    </Button>
+                  </div>
+
+                  {transcribing && (
+                    <div className="flex items-center justify-center gap-2 p-3 bg-blue-50 rounded-lg">
+                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-sm font-medium text-blue-600">Transcribing...</span>
+                    </div>
+                  )}
+
+                  {lastAudioUrl && !isRecording && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">Latest Recording</p>
+                      <div className="flex items-center gap-2 p-2 rounded-lg border">
+                        <audio src={lastAudioUrl} controls className="w-full" style={{ height: '32px' }} />
+                        <a href={lastAudioUrl} download={`answer_${currentQuestionIndex + 1}.webm`}>
+                          <Button variant="outline" size="sm">
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Timers */}
+              <Card className="border-border shadow-lg">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-primary" />
+                    Time Tracking
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Total Time</span>
+                      <span className="text-lg font-mono font-bold text-primary">{formatTime(timeRemaining)}</span>
+                    </div>
+                    <Progress value={(900 - timeRemaining) / 900 * 100} className="h-2" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Question Time</span>
+                    <span className="text-lg font-mono font-bold">{formatTime(questionTime)}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Progress */}
+              <Card className="border-border shadow-lg">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold">Progress</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium">Question {currentQuestionIndex + 1} of {questions.length}</span>
+                    <span className="font-bold text-primary">{Math.round((currentQuestionIndex + 1) / questions.length * 100)}%</span>
+                  </div>
+                  <Progress value={(currentQuestionIndex + 1) / questions.length * 100} className="h-3" />
+                </CardContent>
+              </Card>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleEndInterviewClick}>End Interview</Button>
+
+            {/* Right Content */}
+            <div className="lg:col-span-2 space-y-6 opacity-0 animate-slide-in-right delay-200">
+              {/* Question Video */}
+              <Card className="border-border video-card shadow-lg">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold">AI Interviewer Question</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <div className="relative rounded-xl overflow-hidden bg-black">
+                    <video
+                      key={currentQuestion.id}
+                      ref={questionVideoRef}
+                      src={currentQuestion.video}
+                      playsInline
+                      className="w-full object-contain"
+                      style={{ height: '400px' }}
+                      muted={qvMuted}
+                      onLoadedMetadata={() => { if (!isActive) return; playQuestionVideo({ preferSound: !qvMuted }); }}
+                      onEnded={() => { questionVideoRef.current?.pause(); setQvPlaying(false); }}
+                      onPlay={() => setQvPlaying(true)}
+                      onPause={() => setQvPlaying(false)}
+                      onError={() => { toast.error(`Video error`); }}
+                    />
+                    <div className="absolute bottom-3 right-3 flex gap-2">
+                      {!qvPlaying ? (
+                        <Button size="sm" variant="secondary" onClick={() => playQuestionVideo({ preferSound: !qvMuted })} className="shadow-lg">
+                          <Play className="h-4 w-4 mr-1" /> Play
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="secondary" onClick={pauseQuestionVideo} className="shadow-lg">
+                          <Pause className="h-4 w-4 mr-1" /> Pause
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Question & Answer */}
+              <Card className="border-border shadow-lg">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge className={chipColor(chipType(currentQuestion.text))}>
+                          {chipType(currentQuestion.text)}
+                        </Badge>
+                        <Badge className="bg-yellow-100 text-yellow-800">
+                          {selectedDifficulty === 'entry' ? 'junior' : selectedDifficulty}
+                        </Badge>
+                      </div>
+                      <CardTitle className="text-xl">
+                        Question {currentQuestionIndex + 1} of {questions.length}
+                      </CardTitle>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-lg leading-relaxed">{currentQuestion.text}</p>
+
+                  <div className="space-y-2">
+                    <Textarea
+                      rows={6}
+                      placeholder="Type your answer here, or record and transcribe..."
+                      value={currentAnswer}
+                      onChange={(e) => setCurrentAnswer(e.target.value)}
+                      className="resize-none"
+                    />
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">{currentAnswer.length} characters</span>
+                      {currentQuestionIndex < questions.length - 1 ? (
+                        <Button onClick={collectAnswerAndMaybeFinish} className="shadow-lg hover:shadow-xl transition-all duration-300">
+                          Next Question <SkipForward className="h-4 w-4 ml-2" />
+                        </Button>
+                      ) : (
+                        <Button onClick={collectAnswerAndMaybeFinish} className="bg-green-600 hover:bg-green-700 shadow-lg hover:shadow-xl transition-all duration-300">
+                          Finish & Analyze
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
-        </div>
-
-        {/* Question Video */}
-        <div className="p-4 border-b border-border">
-          <Card>
-            <CardContent className="p-3">
-              <div className="w-full rounded overflow-hidden relative">
-                <div className="w-full" style={{ height: 400 }}>
-                  <video
-                    key={currentQuestion.id}
-                    ref={questionVideoRef}
-                    src={currentQuestion.video}
-                    playsInline
-                    className="w-full h-full object-contain bg-black rounded"
-                    muted={qvMuted}
-                    onLoadedMetadata={() => { if (!isActive) return; playQuestionVideo({ preferSound: !qvMuted }); }}
-                    onEnded={() => { questionVideoRef.current?.pause(); setQvPlaying(false); }}
-                    onPlay={() => setQvPlaying(true)}
-                    onPause={() => setQvPlaying(false)}
-                    onError={() => { toast.error(`Video not found: ${currentQuestion.video}`); }}
-                  />
-                </div>
-                <div className="absolute bottom-3 right-3 flex items-center gap-2">
-                  {!qvPlaying ? (
-                    <Button size="sm" variant="secondary" onClick={() => playQuestionVideo({ preferSound: !qvMuted })}>
-                      <Play className="h-4 w-4 mr-1" /> Play
-                    </Button>
-                  ) : (
-                    <Button size="sm" variant="secondary" onClick={pauseQuestionVideo}>
-                      <Pause className="h-4 w-4 mr-1" /> Pause
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Question + Answer */}
-        <div className="flex-1 p-6 space-y-6 overflow-y-auto">
-          <Card>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Badge className={chipColor(chipType(currentQuestion.text))}>{chipType(currentQuestion.text)}</Badge>
-                    {/* Show selected difficulty text for clarity */}
-                    <Badge className="bg-yellow-100 text-yellow-800">
-                      {selectedDifficulty === 'entry' ? 'junior' : selectedDifficulty}
-                    </Badge>
-                  </div>
-                  <CardTitle className="text-xl">
-                    Question {currentQuestionIndex + 1} of {questions.length}
-                  </CardTitle>
-                </div>
-                <div className="text-right text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    Expected: {Math.floor(120 / 60)}m
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-lg leading-relaxed mb-4">{currentQuestion.text}</p>
-
-              <Textarea
-                rows={5}
-                placeholder="Type your answer, or record and auto-transcribe…"
-                value={currentAnswer}
-                onChange={(e) => setCurrentAnswer(e.target.value)}
-              />
-              <div className="flex justify-between mt-2">
-                <span className="text-sm text-muted-foreground">{currentAnswer.length} chars</span>
-                {currentQuestionIndex < questions.length - 1 ? (
-                  <Button onClick={collectAnswerAndMaybeFinish}>
-                    Next Question <SkipForward className="h-4 w-4 ml-2" />
-                  </Button>
-                ) : (
-                  <Button onClick={collectAnswerAndMaybeFinish} className="bg-green-600 hover:bg-green-700">
-                    Finish & Analyze
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
 
       {/* Start Modal */}
       {showStartModal && (
-        <div className="fixed inset-0 z-50">
-          {/* darker backdrop */}
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-          <div className="absolute inset-0 flex items-center justify-center p-4">
-            <Card className="w-full max-w-lg">
-              <CardHeader>
-                <CardTitle className="text-xl">Start Mock Interview</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  When you click <b>Start</b>, your browser will ask to use your <b>camera</b> and <b>microphone</b>.
-                  You can then <b>Start Recording</b> an answer and <b>Stop & Transcribe</b> to fill the text box automatically.
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-lg" />
+          <Card className="relative w-1/2 max-w-xl opacity-0 animate-scale-in glass shadow-2xl rounded-2xl">
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold gradient-title flex items-center gap-2">
+                Start Your Mock Interview
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent className="space-y-8">
+              {/* Instruction box */}
+              <div className="p-6 rounded-xl border border-border/60 bg-background/70 backdrop-blur-md shadow-inner space-y-4">
+                <p className="text-sm font-medium text-foreground">
+                  <strong>How it works:</strong>
                 </p>
-                <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={() => setShowStartModal(false)}>Cancel</Button>
-                  <Button onClick={handleStartInterview}>Start</Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+
+                <ul className="space-y-4">
+                  <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                    <span className="w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
+                      1
+                    </span>
+                    <span className="flex-1">
+                      Grant camera and microphone permissions when prompted
+                    </span>
+                  </li>
+
+                  <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                    <span className="w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
+                      2
+                    </span>
+                    <span className="flex-1">
+                      Click <strong>“Start Recording”</strong> to capture your answer
+                    </span>
+                  </li>
+
+                  <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                    <span className="w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
+                      3
+                    </span>
+                    <span className="flex-1">
+                      Click <strong>“Stop Recording”</strong> to automatically transcribe
+                    </span>
+                  </li>
+
+                  <li className="flex items-start gap-3 text-sm text-muted-foreground">
+                    <span className="w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
+                      4
+                    </span>
+                    <span className="flex-1">
+                      Review, edit, and submit your answer
+                    </span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-4 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowStartModal(false)}
+                  className="action-card"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleStartInterview}
+                  className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:to-pink-700 shadow-lg action-card"
+                >
+                  Start Interview
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
         </div>
       )}
     </div>

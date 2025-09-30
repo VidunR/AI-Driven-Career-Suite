@@ -54,14 +54,13 @@ export function Contact() {
     {
       icon: Mail,
       title: "Email Support",
-      desc: "support@skillsprint.app",
+      desc: "skillsprint.official@outlook.com",
       href: "mailto:support@skillsprint.app",
     },
   ];
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      {/* Back button */}
       <div className="p-4">
         <Link to="/landing-page">
           <Button
