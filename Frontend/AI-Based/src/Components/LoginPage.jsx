@@ -39,7 +39,6 @@ export function LoginPage({ onLogin, onRegister, onBack }) {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Email/password login
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) {
@@ -59,12 +58,8 @@ export function LoginPage({ onLogin, onRegister, onBack }) {
       const { token } = response.data;
       if (!token) throw new Error("Login failed. No token returned.");
 
-      // Store JWT token in localStorage
       localStorage.setItem("jwtToken", token);
-
-      // Optional: decode token to get user info (or fetch from backend)
       onLogin?.({ email }, token);
-
       navigate("/dashboard", { replace: true });
     } catch (err) {
       setError(
@@ -75,16 +70,14 @@ export function LoginPage({ onLogin, onRegister, onBack }) {
     }
   };
 
-  // Google login with backend integration
   const loginWithGoogle = useGoogleLogin({
-    flow: "auth-code", // Changed from "implicit" to "auth-code"
+    flow: "auth-code",
     scope: "openid email profile",
     onSuccess: async (codeResponse) => {
       try {
         setIsGoogleLoading(true);
         setError("");
 
-        // Send the authorization code to your backend
         const response = await axios.post("http://localhost:5000/auth/google", {
           code: codeResponse.code
         });
@@ -92,12 +85,8 @@ export function LoginPage({ onLogin, onRegister, onBack }) {
         const { token, message } = response.data;
         if (!token) throw new Error("Google login failed. No token returned.");
 
-        // Store the JWT token from your backend
         localStorage.setItem("jwtToken", token);
-
-        // Call onLogin callback
         onLogin?.({ provider: "google" }, token);
-
         navigate("/dashboard", { replace: true });
       } catch (err) {
         console.error("Google login error:", err);
@@ -117,7 +106,6 @@ export function LoginPage({ onLogin, onRegister, onBack }) {
   const linkedInLogin = () => {
     const clientId = '86yjmxh0g4fzdk';
     const redirectUri = encodeURIComponent(window.location.origin + '/auth/linkedin/callback');
-    // CORRECTED: Use OpenID Connect scopes
     const scope = encodeURIComponent('openid profile email');
     const state = Math.random().toString(36).substring(7);
     
@@ -129,23 +117,101 @@ export function LoginPage({ onLogin, onRegister, onBack }) {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <div className="p-4">
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        @keyframes slideInFromTop {
+          from { opacity: 0; transform: translateY(-0.5rem); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideInFromBottom {
+          from { opacity: 0; transform: translateY(0.5rem); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideInFromBottomLarge {
+          from { opacity: 0; transform: translateY(1rem); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideInFromLeft {
+          from { opacity: 0; transform: translateX(-0.5rem); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        
+        @keyframes zoomIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        
+        .animate-fade-in {
+          animation: fadeIn 0.5s ease-out forwards;
+        }
+        
+        .animate-slide-in-top {
+          animation: slideInFromTop 0.5s ease-out forwards;
+        }
+        
+        .animate-slide-in-bottom {
+          animation: slideInFromBottom 0.5s ease-out forwards;
+        }
+        
+        .animate-slide-in-bottom-large {
+          animation: slideInFromBottomLarge 0.7s ease-out forwards;
+        }
+        
+        .animate-slide-in-left {
+          animation: slideInFromLeft 0.5s ease-out forwards;
+        }
+        
+        .animate-zoom-in {
+          animation: zoomIn 0.7s ease-out forwards;
+        }
+        
+        .animate-spin {
+          animation: spin 1s linear infinite;
+        }
+        
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
+        .delay-300 { animation-delay: 0.3s; }
+        .delay-400 { animation-delay: 0.4s; }
+        .delay-500 { animation-delay: 0.5s; }
+        .delay-600 { animation-delay: 0.6s; }
+        .delay-700 { animation-delay: 0.7s; }
+        .delay-800 { animation-delay: 0.8s; }
+        .delay-900 { animation-delay: 0.9s; }
+        .delay-1000 { animation-delay: 1s; }
+        .delay-1100 { animation-delay: 1.1s; }
+        
+        .opacity-0 { opacity: 0; }
+      `}</style>
+
+      <div className="p-4 opacity-0 animate-slide-in-top">
         <Link to="/landing-page">
           <Button
             variant="ghost"
             size="sm"
             onClick={onBack}
-            className="inline-flex items-center gap-2 px-2"
+            className="inline-flex items-center gap-2 px-2 transition-all duration-300 hover:gap-3 hover:pl-1"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4 transition-transform duration-300" />
             Back
           </Button>
         </Link>
       </div>
 
-      <div className="text-center mb-8">
+      <div className="text-center mb-8 opacity-0 animate-zoom-in delay-100">
         <div className="flex items-center justify-center mb-4">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-transform duration-500 hover:scale-110 hover:rotate-6">
             <img
               src="/favicon_1.png"
               alt="SkillSprint Logo"
@@ -156,21 +222,25 @@ export function LoginPage({ onLogin, onRegister, onBack }) {
         </div>
       </div>
 
-      <Card className="border-border max-w-md mx-auto mt-8">
+      <Card className="border-border max-w-md mx-auto mt-8 opacity-0 animate-slide-in-bottom-large delay-200 shadow-xl hover:shadow-2xl transition-shadow duration-500">
         <CardHeader className="space-y-1 text-center mb-2">
-          <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-          <CardDescription>Sign in to your SkillSprint account</CardDescription>
+          <CardTitle className="text-2xl font-bold opacity-0 animate-slide-in-top delay-300">
+            Welcome Back
+          </CardTitle>
+          <CardDescription className="opacity-0 animate-slide-in-top delay-400">
+            Sign in to your SkillSprint account
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="animate-slide-in-top">
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+            <div className="space-y-2 opacity-0 animate-slide-in-left delay-500">
+              <Label htmlFor="email" className="transition-colors duration-200">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -179,11 +249,12 @@ export function LoginPage({ onLogin, onRegister, onBack }) {
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isLoading || isGoogleLoading}
                 required
+                className="transition-all duration-300 focus:scale-[1.01] focus:shadow-lg"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+            <div className="space-y-2 opacity-0 animate-slide-in-left delay-600">
+              <Label htmlFor="password" className="transition-colors duration-200">Password</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -193,40 +264,58 @@ export function LoginPage({ onLogin, onRegister, onBack }) {
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isLoading || isGoogleLoading}
                   required
+                  className="transition-all duration-300 focus:scale-[1.01] focus:shadow-lg"
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent transition-all duration-300 hover:scale-110"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isLoading || isGoogleLoading}
                 >
-                  {!showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {!showPassword ? (
+                    <EyeOff className="h-4 w-4 transition-transform duration-300" />
+                  ) : (
+                    <Eye className="h-4 w-4 transition-transform duration-300" />
+                  )}
                 </Button>
               </div>
             </div>
 
-            <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
-              {isLoading ? "Signing In..." : "Sign In"}
+            <Button 
+              type="submit" 
+              className="w-full opacity-0 animate-slide-in-bottom delay-700 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98]" 
+              disabled={isLoading || isGoogleLoading}
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  Signing In...
+                </span>
+              ) : (
+                "Sign In"
+              )}
             </Button>
           </form>
 
-          {/* Divider */}
-          <div className="flex items-center my-6 mt-4">
+          <div className="flex items-center my-6 mt-4 opacity-0 animate-fade-in delay-800">
             <div className="flex-1 h-px bg-border" />
             <span className="px-3 text-xs text-muted-foreground">or</span>
             <div className="flex-1 h-px bg-border" />
           </div>
 
-          {/* Social buttons */}
           <Button
             type="button"
             onClick={() => loginWithGoogle()}
             disabled={isGoogleLoading || isLoading}
-            className="mt-4 mb-3 w-full flex items-center justify-center gap-3 bg-primary text-white hover:opacity-90"
+            className="mt-4 mb-3 w-full flex items-center justify-center gap-3 bg-primary text-white hover:opacity-90 opacity-0 animate-slide-in-bottom delay-900 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98]"
           >
-            {isGoogleLoading ? "Connecting..." : <GoogleIcon className="h-5 w-5" />}
+            {isGoogleLoading ? (
+              <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            ) : (
+              <GoogleIcon className="h-5 w-5 transition-transform duration-300" />
+            )}
             <span>{isGoogleLoading ? "Connecting..." : "Continue with Google"}</span>
           </Button>
 
@@ -234,17 +323,21 @@ export function LoginPage({ onLogin, onRegister, onBack }) {
             type="button"
             onClick={linkedInLogin}
             disabled={isGoogleLoading || isLoading}
-            className="mt-3 w-full flex items-center justify-center gap-3 bg-[#0077B5] text-white hover:bg-[#005885]"
+            className="mt-3 w-full flex items-center justify-center gap-3 bg-[#0077B5] text-white hover:bg-[#005885] opacity-0 animate-slide-in-bottom delay-1000 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98]"
           >
-            <LinkedInIcon className="h-5 w-5" />
+            <LinkedInIcon className="h-5 w-5 transition-transform duration-300" />
             <span>Continue with LinkedIn</span>
           </Button>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center opacity-0 animate-fade-in delay-1100">
             <p className="text-sm text-muted-foreground">
               Don't have an account?{" "}
               <Link to="/register">
-                <Button variant="link" onClick={onRegister} className="p-0 h-auto font-normal text-primary hover:text-primary/80">
+                <Button 
+                  variant="link" 
+                  onClick={onRegister} 
+                  className="p-0 h-auto font-normal text-primary hover:text-primary/80 transition-all duration-300 hover:underline hover:underline-offset-4"
+                >
                   Create one here
                 </Button>
               </Link>

@@ -6,7 +6,6 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Checkbox } from './ui/checkbox';
-import { Separator } from './ui/separator';
 import {
   Search,
   MapPin,
@@ -16,10 +15,50 @@ import {
   Heart,
   Sparkles,
   FileText,
-  ExternalLink
+  ExternalLink,
+  SearchCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
 import CVPicker from './CVPicker';
+import JobDetailsModal from './JobDetailsModal';
+
+const AnimationStyles = () => (
+  <style>{`
+    @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+    @keyframes slideInFromTop { from { opacity: 0; transform: translateY(-1rem) } to { opacity: 1; transform: translateY(0) } }
+    @keyframes scaleIn { from { opacity: 0; transform: scale(0.97) } to { opacity: 1; transform: scale(1) } }
+    @keyframes float { 0%,100% { transform: translateY(0px) } 50% { transform: translateY(-8px) } }
+
+    .animate-fade-in { animation: fadeIn .6s ease-out forwards }
+    .animate-slide-in-top { animation: slideInFromTop .6s ease-out forwards }
+    .animate-scale-in { animation: scaleIn .45s ease-out forwards }
+    .animate-float { animation: float 3s ease-in-out infinite }
+
+    .calm-bg {
+      background: radial-gradient(1200px 600px at 0% 0%, rgba(34,211,238,0.08), transparent 60%),
+                  radial-gradient(1000px 500px at 100% 20%, rgba(139,92,246,0.10), transparent 55%),
+                  radial-gradient(900px 500px at 50% 100%, rgba(236,72,153,0.08), transparent 50%);
+    }
+    .glass {
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .action-card { transition: transform .35s cubic-bezier(.22,.61,.36,1), box-shadow .35s, background .35s; }
+    .action-card:hover { transform: translateY(-4px) }
+    .sticky-header {
+      position: sticky; top: 0; z-index: 10;
+      backdrop-filter: blur(6px);
+      background: linear-gradient(180deg, rgba(0,0,0,0.04), transparent);
+    }
+    .gradient-title {
+      background: linear-gradient(135deg, #8b5cf6 0%, #22d3ee 50%, #ec4899 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+  `}</style>
+);
 
 export default function JobSearch({ user, accessToken }) {
   const [jobs, setJobs] = useState([]);
@@ -47,7 +86,7 @@ export default function JobSearch({ user, accessToken }) {
   const ANY_TYPE = 'any-type';
   const ANY_LEVEL = 'any-level';
 
-  // ----- Auth helpers -----
+  // ----- Auth helpers (UNCHANGED) -----
   const token = useMemo(
     () => accessToken || localStorage.getItem('jwtToken') || '',
     [accessToken]
@@ -57,7 +96,7 @@ export default function JobSearch({ user, accessToken }) {
     [token]
   );
 
-  // ----- Helpers -----
+  // ----- Helpers (UNCHANGED) -----
   const summarize = (txt, maxLen = 220) => {
     if (!txt) return '';
     const t = String(txt).replace(/\s+/g, ' ').trim();
@@ -98,9 +137,7 @@ export default function JobSearch({ user, accessToken }) {
     };
   };
 
-  // =============================
-  // Load CVs on mount
-  // =============================
+  // Load CVs on mount (UNCHANGED)
   useEffect(() => {
     let cancelled = false;
 
@@ -140,14 +177,10 @@ export default function JobSearch({ user, accessToken }) {
       }
     })();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [token, authHeaders]);
 
-  // =============================
-  // Fetch jobs when a CV is chosen
-  // =============================
+  // Fetch jobs when a CV is chosen (UNCHANGED)
   const fetchJobsForCV = async (cvId) => {
     if (!cvId) return;
     setIsLoadingJobs(true);
@@ -158,16 +191,14 @@ export default function JobSearch({ user, accessToken }) {
     try {
       const res = await axios.post(
         'http://localhost:5000/jobsearch',
-        { cvId: Number(cvId) }, // backend expects { cvId }
+        { cvId: Number(cvId) },
         { headers: { 'Content-Type': 'application/json', ...authHeaders } }
       );
 
-      // Expected: { keywords: { q, country, ... }, jobs: [...] }
       const payload = res.data || {};
       const keywords = payload.keywords || payload.search_params || {};
       const rawJobs = Array.isArray(payload.jobs) ? payload.jobs : [];
 
-      // Save keywords and prefill filters
       const q = keywords.q || '';
       const country = keywords.country || '';
       setBackendQuery(q);
@@ -178,7 +209,7 @@ export default function JobSearch({ user, accessToken }) {
       const mapped = rawJobs.map(toDisplayJob);
       setJobs(mapped);
       setFilteredJobs(mapped);
-      setSelectedJob(mapped[0] || null);
+      setSelectedJob(null);
 
       if (mapped.length === 0) {
         toast.message('No jobs found for this CV yet.');
@@ -193,9 +224,49 @@ export default function JobSearch({ user, accessToken }) {
     }
   };
 
-  // =============================
-  // Filtering
-  // =============================
+  const keywordSearch = async ()=> {
+  try{
+    setIsLoadingJobs(true);
+    const results = await axios.post('http://localhost:5000/jobsearch/search',
+      { jobTitle: searchQuery,
+        country: locationFilter
+      },
+      { headers: authHeaders });
+
+    console.log(results);
+    const payload = results.data || {};
+    const keywords = payload.keywords || payload.search_params || {};
+    const rawJobs = Array.isArray(payload.jobs) ? payload.jobs : [];
+
+    // Save keywords and prefill filters
+    const q = keywords.q || '';
+    const country = keywords.country || '';
+    setBackendQuery(q);
+    setBackendCountry(country);
+    setSearchQuery(q);
+    setLocationFilter(country);
+
+    const mapped = rawJobs.map(toDisplayJob);
+    setJobs(mapped);
+    setFilteredJobs(mapped);
+    setSelectedJob(null);
+
+    if (mapped.length === 0) {
+      toast.message('No jobs found for this CV yet.');
+    } else {
+      toast.success(`Found ${mapped.length} job${mapped.length > 1 ? 's' : ''}`);
+    }
+    
+  }
+  catch(err){
+    console.error('POST /jobsearch (extract jobs) failed:', err);
+    toast.error('Failed to extract jobs from the selected CV');
+  } finally {
+    setIsLoadingJobs(false);
+  }
+}
+
+  // Filtering (UNCHANGED)
   useEffect(() => {
     let filtered = jobs;
 
@@ -217,7 +288,6 @@ export default function JobSearch({ user, accessToken }) {
     }
 
     if (levelFilter && levelFilter !== ANY_LEVEL) {
-      // Level isn't available from API; keep hook for future
       filtered = filtered.filter(() => true);
     }
 
@@ -232,17 +302,23 @@ export default function JobSearch({ user, accessToken }) {
     setFilteredJobs(filtered);
   }, [searchQuery, locationFilter, typeFilter, levelFilter, remoteOnly, savedJobsOnly, jobs]);
 
-  // =============================
-  // Save toggle (local)
-  // =============================
+  useEffect(() => {
+    if (selectedJob) {
+      const updatedJob = jobs.find(j => j.id === selectedJob.id);
+      if (updatedJob && updatedJob.saved !== selectedJob.saved) {
+        setSelectedJob(updatedJob);
+      }
+    }
+  }, [jobs, selectedJob]);
+
+  // Save toggle (UNCHANGED)
   const toggleSaveJob = (jobId) => {
     setJobs((prev) => prev.map((job) => (job.id === jobId ? { ...job, saved: !job.saved } : job)));
     toast.success('Job saved state updated');
   };
+  
 
-  // =============================
-  // UI helpers
-  // =============================
+  // UI helpers (UNCHANGED)
   const getJobTypeColor = (type) => {
     switch (type) {
       case 'full-time':
@@ -261,8 +337,9 @@ export default function JobSearch({ user, accessToken }) {
 
   if (isBootLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center space-y-4">
+      <div className="flex items-center justify-center h-screen calm-bg">
+        <AnimationStyles />
+        <div className="text-center space-y-4 animate-fade-in">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
           <p className="text-muted-foreground">Loading your CVs…</p>
         </div>
@@ -271,168 +348,165 @@ export default function JobSearch({ user, accessToken }) {
   }
 
   return (
-    <div className="h-screen flex bg-background">
-      {/* CV Picker Modal */}
-      <CVPicker
-        open={showCVModal}
-        items={cvs}
-        currentCVId={selectedCV?.id}
-        onClose={() => setShowCVModal(false)}
-        onConfirm={(cv) => {
-          setSelectedCV(cv);
-          setShowCVModal(false);
-          toast.success(`Using "${cv.name}" to suggest jobs`);
-          fetchJobsForCV(cv.id);
-          console.log(cv, cv.id)
-        }}
-      />
+    <>
+      <AnimationStyles />
 
-      {/* Sidebar */}
-      <aside className="w-80 shrink-0 border-r border-border bg-muted/10 overflow-y-auto">
-        <div className="p-6 space-y-6">
-          <div className="space-y-3">
-            <h2 className="text-lg font-semibold">Search & Filters</h2>
+      {/* Full-height layout; sidebar is sticky + non-scroll; main scrolls */}
+      <div className="h-screen flex calm-bg overflow-hidden">
+        {/* CV Picker Modal (UNCHANGED) */}
+        <CVPicker
+          open={showCVModal}
+          items={cvs}
+          currentCVId={selectedCV?.id}
+          onClose={() => setShowCVModal(false)}
+          onConfirm={(cv) => {
+            setSelectedCV(cv);
+            setShowCVModal(false);
+            toast.success(`Using "${cv.name}" to suggest jobs`);
+            fetchJobsForCV(cv.id);
+            console.log(cv, cv.id)
+          }}
+        />
 
-            {/* Backend search context */}
-            {(backendQuery || backendCountry) && (
-              <div className="rounded-lg border border-border/60 bg-background/60 p-3 space-y-2">
-                <p className="text-xs text-muted-foreground">Search context from your CV</p>
-                <div className="flex flex-wrap gap-2">
-                  {backendQuery && (
-                    <Badge className="bg-primary/10 text-primary border-primary/30">Role: {backendQuery}</Badge>
-                  )}
-                  {backendCountry && (
-                    <Badge className="bg-blue-100 text-blue-800 border-blue-200">Country: {backendCountry}</Badge>
-                  )}
-                </div>
+        {/* Sidebar: sticky, not scrollable */}
+        <aside className="w-[21rem] shrink-0 border-r border-border/60 bg-background/60 backdrop-blur-sm h-screen sticky top-0 overflow-hidden">
+          <div className="px-6 pt-6 pb-4">
+            <div className="flex items-center gap-2 justify-center">
+              <Sparkles className="w-5 h-5 text-primary animate-float" />
+              <h2 className="text-lg font-semibold gradient-title">Search & Filters</h2>
+            </div>
+          </div>
+
+          <div className="p-6 pt-2 space-y-6">
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Job Title / Company</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search jobs..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-background/70"
+                />
               </div>
-            )}
-          </div>
+            </div>
 
-          {/* Text search */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Job Title / Company</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search jobs..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Country</label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="e.g., Singapore"
+                  value={locationFilter}
+                  onChange={(e) => setLocationFilter(e.target.value)}
+                  className="pl-10 bg-background/70"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Job Type</label>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="bg-background/70">
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ANY_TYPE}>All Types</SelectItem>
+                  <SelectItem value="permanent">Permanent</SelectItem>
+                  <SelectItem value="contract">Contract</SelectItem>
+                  <SelectItem value="temporary">Temporary</SelectItem>
+                  <SelectItem value="full-time">Full-time</SelectItem>
+                  <SelectItem value="part-time">Part-time</SelectItem>
+                  <SelectItem value="remote">Remote</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Experience Level</label>
+              <Select value={levelFilter} onValueChange={setLevelFilter}>
+                <SelectTrigger className="bg-background/70">
+                  <SelectValue placeholder="All Levels" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ANY_LEVEL}>All Levels</SelectItem>
+                  <SelectItem value="entry">Entry</SelectItem>
+                  <SelectItem value="mid">Mid</SelectItem>
+                  <SelectItem value="senior">Senior</SelectItem>
+                  <SelectItem value="lead">Lead/Principal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Checkbox id="remote" checked={remoteOnly} onCheckedChange={(v) => setRemoteOnly(Boolean(v))} />
+                <label htmlFor="remote" className="text-sm">Remote only</label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox id="saved" checked={savedJobsOnly} onCheckedChange={(v) => setSavedJobsOnly(Boolean(v))} />
+                <label htmlFor="saved" className="text-sm">Saved jobs only</label>
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchQuery(backendQuery || '');
+                  setLocationFilter(backendCountry || '');
+                  setTypeFilter('');
+                  setLevelFilter('');
+                  setRemoteOnly(false);
+                  setSavedJobsOnly(false);
+                }}
+                className="w-full action-card"
+              >
+                Reset to CV Context
+              </Button>
+
+              <Button
+                variant="default"
+                className="w-full action-card"
+                onClick={() => setShowCVModal(true)}
+                disabled={cvsLoading || cvs.length === 0}
+                title={cvsLoading ? 'Loading your CVs…' : cvs.length === 0 ? 'No CVs found' : 'Open CV selector'}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                {selectedCV ? 'Change CV' : 'Select CV'}
+              </Button>
+
+              <Button
+                variant="default"
+                className="w-full action-card"
+                onClick={() => keywordSearch()}
+                disabled={cvsLoading || cvs.length === 0}
+              >
+                <SearchCheck className="h-4 w-4 mr-2" />
+                Search Manually
+              </Button>
             </div>
           </div>
+        </aside>
 
-          {/* Country filter */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Country</label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="e.g., Singapore"
-                value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-
-          {/* Job Type */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Job Type</label>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ANY_TYPE}>All Types</SelectItem>
-                <SelectItem value="permanent">Permanent</SelectItem>
-                <SelectItem value="contract">Contract</SelectItem>
-                <SelectItem value="temporary">Temporary</SelectItem>
-                <SelectItem value="full-time">Full-time</SelectItem>
-                <SelectItem value="part-time">Part-time</SelectItem>
-                <SelectItem value="remote">Remote</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Experience Level (placeholder for future) */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Experience Level</label>
-            <Select value={levelFilter} onValueChange={setLevelFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Levels" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ANY_LEVEL}>All Levels</SelectItem>
-                <SelectItem value="entry">Entry</SelectItem>
-                <SelectItem value="mid">Mid</SelectItem>
-                <SelectItem value="senior">Senior</SelectItem>
-                <SelectItem value="lead">Lead/Principal</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Toggles */}
-          <div className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <Checkbox id="remote" checked={remoteOnly} onCheckedChange={(v) => setRemoteOnly(Boolean(v))} />
-              <label htmlFor="remote" className="text-sm">Remote only</label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox id="saved" checked={savedJobsOnly} onCheckedChange={(v) => setSavedJobsOnly(Boolean(v))} />
-              <label htmlFor="saved" className="text-sm">Saved jobs only</label>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="space-y-2 pt-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSearchQuery(backendQuery || '');
-                setLocationFilter(backendCountry || '');
-                setTypeFilter('');
-                setLevelFilter('');
-                setRemoteOnly(false);
-                setSavedJobsOnly(false);
-              }}
-              className="w-full"
-            >
-              Reset to CV Context
-            </Button>
-
-            <Button
-              variant="default"
-              className="w-full"
-              onClick={() => setShowCVModal(true)}
-              disabled={cvsLoading || cvs.length === 0}
-              title={cvsLoading ? 'Loading your CVs…' : cvs.length === 0 ? 'No CVs found' : 'Open CV selector'}
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              {selectedCV ? 'Change CV' : 'Select CV'}
-            </Button>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main  */}
-      <main className="flex-1 min-w-0 grid grid-cols-1 lg:grid-cols-2">
-        {/* List column */}
-        <section className="min-h-0 overflow-y-auto border-r border-border">
-          <div className="p-6 space-y-6">
+        {/* MAIN – list, scrollable */}
+        <main className="flex-1 min-w-0 overflow-y-auto">
+          {/* Header */}
+          <div className="sticky top-0 z-10 px-6 pt-6 pb-4 sticky-header">
             <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold">Job Search</h1>
+              <div className="opacity-0 animate-slide-in-top">
+                <h1 className="text-2xl font-bold gradient-title">Job Search</h1>
                 <p className="text-sm text-muted-foreground mt-1">
                   Suggestions powered by your selected CV
                 </p>
               </div>
-              <Badge variant="secondary">{filteredJobs.length} jobs</Badge>
+              <Badge variant="secondary" className="opacity-0 animate-scale-in">
+                {filteredJobs.length} jobs
+              </Badge>
             </div>
 
-            {/* Current CV + context */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mt-4 opacity-0 animate-fade-in">
               {selectedCV ? (
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge className="bg-primary/10 text-primary border-primary/30">
@@ -450,202 +524,110 @@ export default function JobSearch({ user, accessToken }) {
                 size="sm"
                 onClick={() => setShowCVModal(true)}
                 disabled={cvsLoading || cvs.length === 0}
+                className="action-card"
               >
                 <FileText className="h-4 w-4 mr-2" />
                 {selectedCV ? 'Change CV' : 'Select CV'}
               </Button>
             </div>
+          </div>
 
+          {/* Jobs list */}
+          <div className="p-6 space-y-4">
             {isLoadingJobs && (
               <div className="flex items-center justify-center py-12">
                 <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               </div>
             )}
 
-            <div className="space-y-4">
-              {!isLoadingJobs && filteredJobs.map((job) => (
-                <Card
-                  key={job.id}
-                  className={`cursor-pointer transition-colors hover:bg-accent/50 ${selectedJob?.id === job.id ? 'ring-2 ring-primary' : ''}`}
-                  onClick={() => setSelectedJob(job)}
-                >
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center flex-wrap gap-2">
-                          <h3 className="font-semibold text-lg truncate">{job.title}</h3>
-                          {job.type && (
-                            <Badge className={`capitalize ${getJobTypeColor(job.type)}`}>{job.type}</Badge>
-                          )}
-                        </div>
-                        <p className="text-muted-foreground flex items-center gap-1 mt-1">
-                          <Building className="h-4 w-4 shrink-0" />
-                          <span className="truncate">{job.company}</span>
-                        </p>
+            {!isLoadingJobs && filteredJobs.map((job, idx) => (
+              <Card
+                key={job.id}
+                className="cursor-pointer glass action-card"
+                style={{ animation: 'fadeIn .48s ease-out forwards', animationDelay: `${0.02 * (idx + 1)}s`, opacity: 0 }}
+                onClick={() => setSelectedJob(job)}  // open modal
+              >
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center flex-wrap gap-2">
+                        <h3 className="font-semibold text-lg truncate">{job.title}</h3>
+                        {job.type && (
+                          <Badge className={`capitalize ${getJobTypeColor(job.type)}`}>{job.type}</Badge>
+                        )}
                       </div>
-                      <div className="flex gap-2 shrink-0">
+                      <p className="text-muted-foreground flex items-center gap-1 mt-1">
+                        <Building className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{job.company}</span>
+                      </p>
+                    </div>
+                    <div className="flex gap-1.5 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleSaveJob(job.id);
+                        }}
+                        title={job.saved ? 'Unsave' : 'Save'}
+                        className="hover:bg-transparent"
+                      >
+                        <Heart className={`h-4 w-4 ${job.saved ? 'fill-red-500 text-red-500' : ''}`} />
+                      </Button>
+                      {job.url && (
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            toggleSaveJob(job.id);
+                            window.open(job.url, '_blank', 'noopener,noreferrer');
                           }}
-                          title={job.saved ? 'Unsave' : 'Save'}
+                          title="Open original job posting"
+                          className="hover:bg-transparent"
                         >
-                          <Heart className={`h-4 w-4 ${job.saved ? 'fill-red-500 text-red-500' : ''}`} />
+                          <ExternalLink className="h-4 w-4" />
                         </Button>
-                        {job.url && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              window.open(job.url, '_blank', 'noopener,noreferrer');
-                            }}
-                            title="Open original job posting"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-4 w-4" />
-                        {job.location}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        {formatDate(job.postedDate)}
-                      </span>
-                    </div>
-
-                    {/* Summary */}
-                    <p className="text-sm text-muted-foreground">
-                      {summarize(job.description, 240)}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-
-              {!isLoadingJobs && filteredJobs.length === 0 && (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">No jobs found matching your criteria.</p>
-                  <p className="text-sm text-muted-foreground mt-2">Try adjusting filters or pick a different CV.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* Details column */}
-        <section className="min-h-0 overflow-y-auto">
-          {selectedJob ? (
-            <div className="p-6 space-y-6">
-              {/* Header card */}
-              <div className="bg-muted/10 border border-border rounded-xl p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h1 className="text-2xl font-bold leading-tight">{selectedJob.title}</h1>
-                    <p className="text-lg text-muted-foreground flex items-center gap-2 mt-1">
-                      <Building className="h-5 w-5 shrink-0" />
-                      <span className="truncate">{selectedJob.company}</span>
-                    </p>
-                    <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mt-3">
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-4 w-4" />
-                        {selectedJob.location}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        Posted {formatDate(selectedJob.postedDate)}
-                      </span>
-                      {selectedJob.type && (
-                        <Badge className={`capitalize ${getJobTypeColor(selectedJob.type)}`}>{selectedJob.type}</Badge>
                       )}
                     </div>
                   </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Button variant="outline" onClick={() => toggleSaveJob(selectedJob.id)}>
-                      <Heart className={`h-4 w-4 mr-2 ${selectedJob.saved ? 'fill-red-500 text-red-500' : ''}`} />
-                      {selectedJob.saved ? 'Saved' : 'Save'}
-                    </Button>
-                    <Button
-                      onClick={() => selectedJob.url && window.open(selectedJob.url, '_blank', 'noopener,noreferrer')}
-                      disabled={!selectedJob.url}
-                      title={selectedJob.url ? 'Open original job posting' : 'No external URL available'}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      View Job Post
-                    </Button>
+
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-4 w-4" />
+                      {job.location}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-4 w-4" />
+                      {formatDate(job.postedDate)}
+                    </span>
                   </div>
-                </div>
+
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {summarize(job.description, 240)}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+
+            {!isLoadingJobs && filteredJobs.length === 0 && (
+              <div className="text-center py-12 animate-fade-in">
+                <p className="text-muted-foreground">No jobs found matching your criteria.</p>
+                <p className="text-sm text-muted-foreground mt-2">Try adjusting filters or pick a different CV.</p>
               </div>
+            )}
+          </div>
+        </main>
+      </div>
 
-              <Separator />
-
-              {/* Job Description */}
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold">Job Description</h3>
-                <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                  {selectedJob.description || '—'}
-                </p>
-              </div>
-
-              {/* Optional sections (kept for future data) */}
-              {selectedJob.requirements?.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold">Requirements</h3>
-                  <ul className="space-y-2">
-                    {selectedJob.requirements.map((req, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <span className="text-primary mt-1">•</span>
-                        <span className="text-muted-foreground">{req}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {selectedJob.skills?.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold">Required Skills</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedJob.skills.map((skill, index) => (
-                      <Badge key={index} variant="secondary">
-                        {skill}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {selectedJob.benefits?.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold">Benefits</h3>
-                  <ul className="space-y-2">
-                    {selectedJob.benefits.map((benefit, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <span className="text-accent mt-1">✓</span>
-                        <span className="text-muted-foreground">{benefit}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="h-full flex items-center justify-center p-6">
-              <div className="text-center space-y-2">
-                <h3 className="text-lg font-medium text-muted-foreground">Select a job to view details</h3>
-                <p className="text-muted-foreground">Choose a job from the list to see full details and open the original posting.</p>
-              </div>
-            </div>
-          )}
-        </section>
-      </main>
-    </div>
+      {/* Centered premium modal */}
+      <JobDetailsModal
+        open={Boolean(selectedJob)}
+        job={selectedJob}
+        onClose={() => setSelectedJob(null)}
+        toggleSaveJob={toggleSaveJob}
+        getJobTypeColor={getJobTypeColor}
+        formatDate={formatDate}
+      />
+    </>
   );
 }

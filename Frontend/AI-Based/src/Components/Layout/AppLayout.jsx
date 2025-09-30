@@ -29,7 +29,6 @@ export function AppLayout({ onLogout }) {
   const navigate = useNavigate();
   const currentPage = location.pathname.substring(1);
 
-  // Fetch profile from backend using JWT from localStorage
   useEffect(() => {
     const fetchProfile = async () => {
       setLoading(true);
@@ -76,11 +75,27 @@ export function AppLayout({ onLogout }) {
   ];
 
   const SidebarContent = () => (
-    <div className="h-full flex flex-col bg-sidebar border-r border-sidebar-border">
+    <div className="h-full flex flex-col bg-sidebar border-r border-sidebar-border relative overflow-hidden">
+      <style>{`
+        .calm-sidebar-bg {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background: 
+            radial-gradient(800px 400px at 0% 0%, rgba(34,211,238,0.06), transparent 50%),
+            radial-gradient(600px 300px at 100% 50%, rgba(139,92,246,0.08), transparent 45%),
+            radial-gradient(500px 250px at 50% 100%, rgba(236,72,153,0.06), transparent 40%);
+          opacity: 0.7;
+        }
+      `}</style>
+      
+      {/* Gradient background overlay */}
+      <div className="calm-sidebar-bg"></div>
+
       {/* Logo */}
-      <div className="p-4 border-b border-sidebar-border">
+      <div className="p-4 border-b border-sidebar-border relative z-10">
         <div className="flex items-center gap-4">
-          <div className="w-8 h-8 bg-sidebar-primary rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center shadow-sm">
             <img
               src="/favicon_1.png"
               alt="SkillSprint Logo"
@@ -94,7 +109,7 @@ export function AppLayout({ onLogout }) {
       </div>
 
       {/* Navigation */}
-      <div className="flex-1 py-6">
+      <div className="flex-1 py-6 relative z-10">
         <nav className="space-y-1 px-3">
           {navigationItems.map((item) => {
             const Icon = item.icon;
@@ -103,9 +118,9 @@ export function AppLayout({ onLogout }) {
               <Button
                 key={item.id}
                 variant={isActive ? "default" : "ghost"}
-                className={`w-full justify-start space-x-3 h-11 ${
+                className={`w-full justify-start space-x-3 h-11 transition-all duration-300 ${
                   isActive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90"
+                    ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground hover:from-primary/90 hover:to-primary/80 shadow-md"
                     : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 }`}
                 onClick={() => {
@@ -122,7 +137,7 @@ export function AppLayout({ onLogout }) {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="p-3 border-t border-sidebar-border space-y-1">
+      <div className="p-3 border-t border-sidebar-border space-y-1 relative z-10">
         {bottomItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentPage === item.id;
@@ -130,9 +145,9 @@ export function AppLayout({ onLogout }) {
             <Button
               key={item.id}
               variant={isActive ? "default" : "ghost"}
-              className={`w-full justify-start space-x-3 h-11 ${
+              className={`w-full justify-start space-x-3 h-11 transition-all duration-300 ${
                 isActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90"
+                  ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground hover:from-primary/90 hover:to-primary/80 shadow-md"
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               }`}
               onClick={() => {
@@ -148,7 +163,7 @@ export function AppLayout({ onLogout }) {
 
         <Button
           variant="ghost"
-          className="w-full justify-start space-x-3 h-11 text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive"
+          className="w-full justify-start space-x-3 h-11 text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-300"
           onClick={() => {
             localStorage.removeItem("jwtToken");
             onLogout?.();
@@ -164,6 +179,17 @@ export function AppLayout({ onLogout }) {
 
   return (
     <div className="h-screen flex bg-background">
+      <style>{`
+        .calm-header-bg {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background: 
+            radial-gradient(600px 200px at 0% 50%, rgba(99,102,241,0.04), transparent 50%),
+            radial-gradient(400px 150px at 100% 50%, rgba(147,51,234,0.05), transparent 45%);
+          opacity: 0.8;
+        }
+      `}</style>
       {/* Desktop Sidebar */}
       <div className="hidden lg:block w-64 border-r border-border">
         <SidebarContent />
@@ -185,8 +211,11 @@ export function AppLayout({ onLogout }) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Navigation */}
-        <header className="h-16 border-b border-border bg-card flex items-center justify-between px-6">
-          <div className="flex items-center space-x-4">
+        <header className="h-16 border-b border-border bg-card flex items-center justify-between px-6 relative overflow-hidden">
+          {/* Gradient background overlay */}
+          <div className="calm-header-bg"></div>
+          
+          <div className="flex items-center space-x-4 relative z-10">
             <Button
               variant="ghost"
               size="sm"
@@ -200,7 +229,7 @@ export function AppLayout({ onLogout }) {
             </h1>
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-4 relative z-10">
             {loading ? (
               <p className="text-sm text-muted-foreground">Loading profile...</p>
             ) : error ? (
@@ -211,11 +240,11 @@ export function AppLayout({ onLogout }) {
                   <p className="text-sm font-medium">{profile.firstName} {profile.lastName}</p>
                   <p className="text-xs text-muted-foreground">{profile.email}</p>
                 </div>
-                <Avatar>
+                <Avatar className="ring-2 ring-primary/10">
                   {profile.proImgPath ? (
                     <AvatarImage src={`http://localhost:5000${profile.proImgPath}`} />
                   ) : (
-                    <AvatarFallback className="bg-primary text-primary-foreground">
+                    <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
                       {profile.firstName[0]}{profile.lastName[0]}
                     </AvatarFallback>
                   )}
