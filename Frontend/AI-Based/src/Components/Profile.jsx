@@ -365,7 +365,7 @@ export function Profile({ onNavigate }) {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-sm">First Name</Label>
+                  <Label className="text-sm mb-2">First Name</Label>
                   <Input
                     value={profileData.firstName}
                     onChange={(e) => setProfileData(prev => ({ ...prev, firstName: e.target.value }))}
@@ -375,7 +375,7 @@ export function Profile({ onNavigate }) {
                   {errors.firstName && <p className="text-xs text-red-500 mt-1">{errors.firstName}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-sm">Last Name</Label>
+                  <Label className="text-sm mb-2">Last Name</Label>
                   <Input
                     value={profileData.lastName}
                     onChange={(e) => setProfileData(prev => ({ ...prev, lastName: e.target.value }))}
@@ -385,11 +385,11 @@ export function Profile({ onNavigate }) {
                   {errors.lastName && <p className="text-xs text-red-500 mt-1">{errors.lastName}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-sm">Email</Label>
+                  <Label className="text-sm mb-2">Email</Label>
                   <Input value={profileData.email} disabled className="bg-muted" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-sm">Phone</Label>
+                  <Label className="text-sm mb-2">Phone</Label>
                   <Input
                     value={profileData.phoneNumber}
                     onChange={(e) => setProfileData(prev => ({ ...prev, phoneNumber: e.target.value }))}
@@ -399,7 +399,7 @@ export function Profile({ onNavigate }) {
                   {errors.phoneNumber && <p className="text-xs text-red-500 mt-1">{errors.phoneNumber}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-sm">Country</Label>
+                  <Label className="text-sm mb-2">Country</Label>
                   <Input
                     value={profileData.country}
                     onChange={(e) => setProfileData(prev => ({ ...prev, country: e.target.value }))}
@@ -408,7 +408,7 @@ export function Profile({ onNavigate }) {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-sm">Address</Label>
+                  <Label className="text-sm mb-2">Address</Label>
                   <Input
                     value={profileData.address}
                     onChange={(e) => setProfileData(prev => ({ ...prev, address: e.target.value }))}
@@ -417,7 +417,7 @@ export function Profile({ onNavigate }) {
                   />
                 </div>
                 <div className="space-y-1.5 md:col-span-2">
-                  <Label className="text-sm">Bio</Label>
+                  <Label className="text-sm mb-2">Bio</Label>
                   <Textarea
                     value={profileData.bio}
                     onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
@@ -427,7 +427,7 @@ export function Profile({ onNavigate }) {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-sm">Current Role</Label>
+                  <Label className="text-sm mb-2">Current Role</Label>
                   <Input
                     value={profileData.currentProfessionalRole}
                     onChange={(e) => setProfileData(prev => ({ ...prev, currentProfessionalRole: e.target.value }))}
@@ -436,7 +436,7 @@ export function Profile({ onNavigate }) {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-sm">Target Role</Label>
+                  <Label className="text-sm mb-2">Target Role</Label>
                   <Input
                     value={profileData.targetProfessionalRole}
                     onChange={(e) => setProfileData(prev => ({ ...prev, targetProfessionalRole: e.target.value }))}
@@ -445,7 +445,7 @@ export function Profile({ onNavigate }) {
                   />
                 </div>
                 <div className="space-y-1.5 md:col-span-2">
-                  <Label className="text-sm">LinkedIn URL</Label>
+                  <Label className="text-sm mb-2">LinkedIn URL</Label>
                   <Input
                     value={profileData.linkedInURL}
                     onChange={(e) => setProfileData(prev => ({ ...prev, linkedInURL: e.target.value }))}

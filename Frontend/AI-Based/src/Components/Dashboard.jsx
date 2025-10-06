@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useNavigate } from 'react-router-dom';
 import {
   Card,
   CardContent,
@@ -60,6 +61,8 @@ export function Dashboard({ onNavigate }) {
     },
   ]);
 
+  const navigate = useNavigate();
+
   const [quickActions] = useState([
     {
       id: "create-cv",
@@ -74,7 +77,7 @@ export function Dashboard({ onNavigate }) {
       title: "Find Jobs",
       description: "Discover opportunities that match your skills",
       icon: Search,
-      color: "bg-green-500",
+      color: "bg-blue-500",
       link: "/job-search",
     },
     {
@@ -82,7 +85,7 @@ export function Dashboard({ onNavigate }) {
       title: "Practice Interview",
       description: "Improve your interview skills with AI",
       icon: MessageSquare,
-      color: "bg-purple-500",
+      color: "bg-blue-500",
       link: "/mock-interview-setup",
     },
   ]);
@@ -311,7 +314,7 @@ export function Dashboard({ onNavigate }) {
       {/* Header with gradient text and animated icon */}
       <div className="space-y-2 opacity-0 animate-slide-in-top">
         <div className="flex items-center gap-3">
-          <h1 className="text-4xl font-bold">
+          <h1 className="text-3xl font-bold">
             {getGreeting()}, {stats.firstName} {stats.lastName}!
           </h1>
           <Sparkles className="w-6 h-6 text-yellow-500 animate-float" />
@@ -400,7 +403,7 @@ export function Dashboard({ onNavigate }) {
               key={action.id}
               className={`border-border action-card relative cursor-pointer opacity-0 animate-scale-in`}
               style={{ animationDelay: `${0.6 + index * 0.1}s` }}
-              onClick={action.action}
+              onClick={() => navigate(action.link)}
             >
               <CardHeader>
                 <div
@@ -414,7 +417,7 @@ export function Dashboard({ onNavigate }) {
               <CardContent>
                 <Link to={action.link}>
                   <Button
-                    variant="ghost"
+                    variant="default"
                     className="w-full justify-between p-0 h-auto group hover:text-primary transition-colors duration-300"
                   >
                     <span className="font-medium">Get Started</span>
@@ -548,16 +551,14 @@ export function Dashboard({ onNavigate }) {
                 You've completed {stats.interviewCount} mock interviews. Keep up the great work!
               </p>
             </div>
-            <Link to="/leaderboard">
-              <Button
-                variant="secondary"
-                onClick={() => onNavigate("leaderboard")}
-                className="hover:scale-105 transition-all duration-300 hover:shadow-lg"
-              >
-                View Leaderboard
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </Link>
+            <Button
+              variant="secondary"
+              onClick={() => onNavigate("leaderboard")}
+              className="hover:scale-105 transition-all duration-300 hover:shadow-lg"
+            >
+              View Leaderboard
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
           </div>
         </CardContent>
       </Card>

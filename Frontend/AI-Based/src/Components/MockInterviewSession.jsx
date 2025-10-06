@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
@@ -197,24 +198,21 @@ export function MockInterviewSession() {
     try {
       setTranscribing(true);
       const form = new FormData();
-      form.append('audio', blob, 'answer.webm');
-      form.append('language', 'en');
+      form.append("audio", blob, "answer.webm");
+      form.append("language", "en");
 
-      const token = localStorage.getItem('jwtToken');
-      const r = await fetch('http://localhost:5000/interview/transcribe', {
-        method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        body: form
+      const token = localStorage.getItem("jwtToken");
+
+      const r = await axios.post("http://localhost:5000/interview/transcribe", form, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          "Content-Type": "multipart/form-data",
+        },
       });
 
-      const data = await r.json();
-      if (!r.ok) {
-        console.error('Transcribe error:', data);
-        toast.error(data?.detail || data?.error || 'Transcription failed.');
-        return;
-      }
-      setCurrentAnswer(data.text || '');
-      toast.success('Transcription ready. Review and submit.');
+      const data = r.data;
+      setCurrentAnswer(data.text || "");
+      toast.success("Transcription ready. Review and submit.");
     } catch (e) {
       console.error(e);
       toast.error('Transcription request failed.');

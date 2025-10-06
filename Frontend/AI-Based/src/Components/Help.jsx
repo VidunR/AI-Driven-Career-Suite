@@ -195,7 +195,7 @@ export function Help({ user, accessToken, onNavigate }) {
                     </div>
                     <div className="flex items-center justify-between pt-1.5 border-t">
                       <span className="text-xs font-medium text-muted-foreground">{tutorial.duration}</span>
-                      <Button size="sm" variant="outline" className="hover:bg-primary hover:text-white transition-all duration-300 h-8 text-xs">
+                      <Button size="sm" variant="outline" className="mt-2 hover:bg-primary hover:text-white transition-all duration-300 h-8 text-xs ">
                         {tutorial.type === 'video' ? 'Watch' : 'Read'}
                         <ExternalLink className="h-3 w-3 ml-1.5" />
                       </Button>
@@ -219,7 +219,7 @@ export function Help({ user, accessToken, onNavigate }) {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="subject" className="text-sm">Subject</Label>
+                  <Label htmlFor="subject" className="text-sm mb-2">Subject</Label>
                   <Input
                     id="subject"
                     value={contactForm.subject}
@@ -229,7 +229,7 @@ export function Help({ user, accessToken, onNavigate }) {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="message" className="text-sm">Message</Label>
+                  <Label htmlFor="message" className="text-sm mb-2">Message</Label>
                   <Textarea
                     id="message"
                     value={contactForm.message}
