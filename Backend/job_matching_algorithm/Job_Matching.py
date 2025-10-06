@@ -15,9 +15,9 @@ from rapidfuzz import fuzz, process
 import spacy
 from keybert import KeyBERT
 
-# -------------------------------
+
 # NEW: OCR deps you asked to use
-# -------------------------------
+
 from pdf2image import convert_from_path
 import pytesseract
 from PIL import Image
@@ -59,9 +59,7 @@ try:
 except Exception:
     _WIN32_AVAILABLE = False
 
-# =========================
-# CONFIG
-# =========================
+
 APIJOBS_URL = os.getenv("JOB_API_URL", "")
 APIJOBS_KEY = os.getenv("API_JOB_DEV", "")
 
