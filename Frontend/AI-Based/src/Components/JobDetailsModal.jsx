@@ -323,9 +323,11 @@ export default function JobDetailsModal({
                       <Calendar className="h-4 w-4" />
                       Posted {formatDate(job.postedDate)}
                     </span>
-                    {job.type && (
-                      <Badge className={`capitalize ${getJobTypeColor(job.type)}`}>{job.type}</Badge>
-                    )}
+                    <span className="flex items-center gap-1 mb-3">
+                      {job.type && (
+                        <Badge className={`capitalize ${getJobTypeColor(job.type)}`}>{job.type}</Badge>
+                      )}
+                    </span>
                   </div>
                 </div>
 

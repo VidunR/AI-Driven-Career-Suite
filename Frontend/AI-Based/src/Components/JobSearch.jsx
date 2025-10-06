@@ -195,6 +195,7 @@ export default function JobSearch({ user, accessToken }) {
         { headers: { 'Content-Type': 'application/json', ...authHeaders } }
       );
 
+      console.log(res);
       const payload = res.data || {};
       const keywords = payload.keywords || payload.search_params || {};
       const rawJobs = Array.isArray(payload.jobs) ? payload.jobs : [];

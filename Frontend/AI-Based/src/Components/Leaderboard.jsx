@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import axios from 'axios';
 
 /* ----------------------- Shared Animations (parity with other pages) ---------------------- */
 const AnimationStyles = () => (
@@ -108,15 +109,13 @@ export function Leaderboard({ user }) {
     }
 
     try {
-      const res = await fetch(`http://localhost:5000/leaderboard/${tf}`, {
+      const res = await axios.get(`http://localhost:5000/leaderboard/${tf}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      if (!res.ok) throw new Error(`Failed to fetch ${tf} leaderboard`);
-
-      const data = await res.json();
+      const data = res.data;
 
       // Normalize data for frontend (UNCHANGED)
       const mapped = data.map((entry) => ({
@@ -127,7 +126,6 @@ export function Leaderboard({ user }) {
         rank: entry.rank,
         change: 0, // backend doesn’t provide change, keep 0
       }));
-
       setLeaderboard(mapped);
     } catch (err) {
       console.error("Error fetching leaderboard:", err);
@@ -205,7 +203,7 @@ export function Leaderboard({ user }) {
             onValueChange={(value) => setTimeframe(value)}
             className="opacity-0 animate-scale-in delay-100"
           >
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-3 mb-3">
               <TabsTrigger value="weekly">This Week</TabsTrigger>
               <TabsTrigger value="monthly">This Month</TabsTrigger>
               <TabsTrigger value="alltime">All Time</TabsTrigger>

@@ -23,7 +23,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Call Layout
+// Call the Layout router
 app.use('/applayout', applayoutRouter);
 
 // Calls the auth router
