@@ -1,1 +1,0 @@
-// Simple helper functions - no exports to avoid import issues

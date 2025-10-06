@@ -1,1 +1,0 @@
-// Simple type definitions - no exports to avoid import issues
